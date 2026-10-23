@@ -1,0 +1,46 @@
+# 構成とデータの扱い
+
+## 責任の分離
+
+|モジュール|責任|依存|
+|---|---|---|
+|BrowserCore|モデル、整合性を維持する操作、保存・復元|Foundation、Observation|
+|BrowserRuntime|WKWebView、データストア、ナビゲーションと各delegate|WebKit、AppKit、Observation|
+|BrowserApp|SwiftUI画面、メニューとショートカット、CoreとRuntimeの接続|BrowserCore、BrowserRuntime|
+
+外部Swiftパッケージは使用しない。SwiftPMでライブラリの検証とアプリのビルドを行い、Xcodeプロジェクトも同じソースとローカルパッケージを使用する。
+
+## モデルの意味
+
+- ProfileはCookieなどのWebサイトデータの分離単位。安定したUUIDをWKWebsiteDataStoreの識別子として再利用する。複数Spaceから同じProfileを参照できる。
+- Spaceは整理単位。Profileを1つ参照し、タブとフォルダを持つ。
+- Tabの現在URL、固定時の基準URL、ページタイトル、独自の名前を別々に保存する。
+- FolderはPinned用。同じSpace内に所属し、循環参照を禁止する。削除時は子要素を親へ戻す。
+- Favoriteは最大12件の共通リンク定義。実際のWebViewはFavoriteとProfileの組で保持し、通常タブとして二重登録しない。
+- Archiveは閉じたタブを復元するための情報。閲覧履歴とは異なる。
+- Splitは既存タブ2件への参照。タブを複製しない。メンバーが閉じられたり別Spaceへ移った場合は単一表示へ戻す。
+
+## 状態変更とWebKitの接続
+
+画面の操作はBrowserActionとしてBrowserStoreに渡す。WebKitから受け取ったURLとタイトルの更新はページの再読み込みを発生させずにモデルへ反映する。WebViewの生成・保持はWebSessionPoolが担当する。SwiftUIの表示更新は既存のWebViewを取り付けるだけで、初期化を繰り返さない。
+
+起動時はモデルを復元・検証してから、表示中のタブまたはSplitの2タブを生成する。非表示の復元タブに対するネットワークアクセスを一斉に始めない。表示済みのタブは切替後もセッションを保持する。Profileを変えた場合は元のWebViewを破棄し、新しいデータストアで作り直す。
+
+ポップアップはWebKitが渡すconfigurationを使用する。独自のHTTPクライアントでログイン済みダウンロードをやり直す実装は採用しない。TLS検証はWebKitの標準動作を使用し、証明書エラーを自動承認しない。
+
+## 保存と互換性
+
+状態ファイルはschemaVersionを持つJSON。変更を直列化して原子的に保存し、起動時に所属・選択・Splitなどの参照を検証する。破損や未知のschemaVersionを検出した場合は通知し、元ファイルを無言で空状態に置き換えない。
+
+URLとレイアウトは復元するが、DOM、入力中フォーム、JavaScriptのメモリ、全ナビゲーション履歴は永続化しない。同期・共有用の形式は未定義で、ローカル保存ファイルをそのまま公開APIとして扱わない。
+
+## WebKitとOSの境界
+
+macOS 15.4以上でSwiftUIのシェルとNSViewRepresentable経由のWKWebViewを使う。macOS 26以上に限られるSwiftUI WebViewには依存しない。
+
+- 永続Profile: [WebKitのProfile API](https://webkit.org/blog/14423/building-profiles-with-new-webkit-api/)
+- 将来のWeb拡張: [WebKit 18.4の公開API](https://webkit.org/blog/16574/webkit-features-in-safari-18-4/)。Storeや全Chrome APIの互換性とは別要件。
+- 開発者向け検査: [Safari Web Inspector](https://developer.apple.com/documentation/safari-developer-tools/enabling-inspecting-content-in-your-apps)。非公開APIによるアプリ内Inspector起動は行わない。
+- 一般サイトのパスキー: [ブラウザ向けentitlement](https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.developer.web-browser.public-key-credential)などの条件を後続段階で評価する。
+
+サンドボックスではネットワーククライアント、利用者が選択したファイル、カメラ・マイク・位置情報の必要な権限のみ宣言する。サイトへの許可とOSからの許可は別であり、自動で全面許可しない。通常のHTTPサイト表示のためATSはWebコンテンツに限って任意通信を許可する。これはTLS証明書検証を無効化する設定ではない。
