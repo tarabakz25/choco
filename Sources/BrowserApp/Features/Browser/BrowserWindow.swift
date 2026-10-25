@@ -25,7 +25,7 @@ struct BrowserWindow: View {
     @ChocoReducedMotion private var reduceMotion: Bool
 
     private var commandPresented: Bool { model.commandMode != nil }
-    private var modalPresented: Bool { commandPresented || model.showsSiteControls }
+    private var modalPresented: Bool { commandPresented || model.showsSiteControls || model.showsNewMenu }
     private var sidebarPresented: Bool { !model.showsArchive && (model.state.sidebarVisible || sidebarPeek) }
     private var floatingSidebar: Bool { sidebarPeek && !model.state.sidebarVisible && !model.showsArchive }
     private var sidebarPose: Int { model.showsArchive ? 3 : model.state.sidebarVisible ? 2 : sidebarPeek ? 1 : 0 }
@@ -92,6 +92,23 @@ struct BrowserWindow: View {
             }
             .animation(reduceMotion ? nil : ChocoMotion.dismiss, value: model.showsSiteControls)
         }
+        .overlayPreferenceValue(NewMenuAnchorKey.self) { anchor in
+            GeometryReader { geometry in
+                if model.showsNewMenu, let anchor {
+                    Color.black.opacity(0.001).ignoresSafeArea()
+                        .contentShape(Rectangle()).onTapGesture { model.showsNewMenu = false }
+                    let rect = geometry[anchor]
+                    // Figma: right edges align, and the menu's tail sits 8.5pt above the plus button.
+                    NewMenuView(model: model)
+                        .fixedSize()
+                        .position(x: max(NewMenuView.width / 2 + 8, rect.maxX - NewMenuView.width / 2),
+                                  y: rect.minY - 14 - 129)
+                        .transition(.asymmetric(insertion: .identity, removal: .opacity))
+                        .accessibilityElement(children: .contain)
+                }
+            }
+            .animation(reduceMotion ? nil : ChocoMotion.dismiss, value: model.showsNewMenu)
+        }
         .frame(minWidth: 760, minHeight: 500)
         .background(ChocoTheme.sidebar)
         .background(WindowReference { window in
@@ -110,6 +127,7 @@ struct BrowserWindow: View {
             edgeHovered = false
             sidebarPeek = false
             model.showsSiteControls = false
+            model.showsNewMenu = false
             updateWindowControls()
         }
         .onChange(of: sidebarPeek) { _, visible in
@@ -118,6 +136,7 @@ struct BrowserWindow: View {
         }
         .onChange(of: modalPresented) { _, open in if open { edgeHovered = false } }
         .onChange(of: model.showsSiteControls) { _, open in if !open { schedulePeekDismissal() } }
+        .onChange(of: model.showsNewMenu) { _, open in if !open { schedulePeekDismissal() } }
         .onChange(of: model.editor?.id) { _, editor in
             if editor == nil { schedulePeekDismissal() } else { edgeHovered = false }
         }
@@ -125,6 +144,7 @@ struct BrowserWindow: View {
             edgeHovered = false
             sidebarPeek = false
             model.showsSiteControls = false
+            model.showsNewMenu = false
             updateWindowControls()
         }
         .onAppear {
@@ -144,6 +164,7 @@ struct BrowserWindow: View {
         .onExitCommand {
             // The command field owns Escape, including IME marked-text handling.
             if model.showsSiteControls { model.showsSiteControls = false }
+            if model.showsNewMenu { model.showsNewMenu = false }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if let error = model.store.persistenceError {
@@ -232,7 +253,7 @@ struct BrowserWindow: View {
             DesignIcon("de36e", size: 16).frame(width: 28, height: 28)
                 .background(ChocoTheme.sidebar.opacity(0.95), in: RoundedRectangle(cornerRadius: 6))
         }
-        .buttonStyle(.plain).help("サイドバーを表示 (⌘S)")
+        .buttonStyle(ChocoPressStyle()).help("サイドバーを表示 (⌘S)")
         .accessibilityLabel("サイドバーを表示").accessibilityIdentifier("show-sidebar")
         .padding(.leading, ChocoSpace.lg).padding(.top, 14)
     }
@@ -266,10 +287,10 @@ struct BrowserWindow: View {
 
     private func schedulePeekDismissal() {
         peekDismissTask?.cancel()
-        guard sidebarPeek && !sidebarHovered && !edgeHovered && !model.showsSiteControls && model.editor == nil else { return }
+        guard sidebarPeek && !sidebarHovered && !edgeHovered && !model.showsSiteControls && !model.showsNewMenu && model.editor == nil else { return }
         peekDismissTask = Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(220))
-            guard !Task.isCancelled && !sidebarHovered && !edgeHovered && !model.showsSiteControls && model.editor == nil else { return }
+            guard !Task.isCancelled && !sidebarHovered && !edgeHovered && !model.showsSiteControls && !model.showsNewMenu && model.editor == nil else { return }
             sidebarPeek = false
         }
     }

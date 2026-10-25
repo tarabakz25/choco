@@ -14,6 +14,7 @@ import WebKit
     var editor: EditorRequest?
     var showsArchive = false
     var showsSiteControls = false
+    var showsNewMenu = false
     var showsFind = false
     var findText = ""
     var focusedPaneID: UUID?
@@ -90,6 +91,7 @@ import WebKit
 
     func showCommand(_ mode: CommandMode) {
         showsSiteControls = false
+        showsNewMenu = false
         commandMode = mode
         commandError = nil
         commandText = mode == .navigate ? (activeSession?.url?.absoluteString ?? selectedTab?.url ?? "") : ""
@@ -248,9 +250,21 @@ import WebKit
 
     func closeActive() {
         if commandMode != nil { commandMode = nil; return }
+        if showsNewMenu { showsNewMenu = false; return }
         if showsSiteControls { showsSiteControls = false; return }
         if showsArchive { showsArchive = false; return }
         if let id = navigationTabID { send(.closeTab(id)) }
+    }
+
+    /// Opens a blank tab beside the current one and asks for its address.
+    func newSplit() {
+        showsNewMenu = false
+        guard state.split == nil, let current = selectedTab else { return }
+        send(.newTab(url: "about:blank"))
+        if let created = selectedTab, created.id != current.id {
+            send(.setSplit(leading: current.id, trailing: created.id))
+        }
+        showCommand(.navigate)
     }
 
     func split(with tab: BrowserTab) {

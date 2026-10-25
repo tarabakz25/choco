@@ -8,6 +8,15 @@ enum ChocoMotion {
     static let siteEntry = Animation(FigmaSampledSpring(duration: 0.32)).delay(0.05)
     static let siteOpacity = Animation.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.14).delay(0.05)
 
+    /// New menu (149:7410): 280 ms spring for the panel and the plus-to-x rotation; opacity 140 ms;
+    /// rows follow 40 ms later, 30 ms apart, fading over 140 ms and rising 4pt over 200 ms.
+    static let newMenuEntry = Animation(FigmaSampledSpring(duration: 0.28))
+    static let newMenuOpacity = Animation.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.14)
+    static func newMenuRowOpacity(_ index: Int) -> Animation { newMenuOpacity.delay(0.04 + 0.03 * Double(index)) }
+    static func newMenuRowRise(_ index: Int) -> Animation {
+        .timingCurve(0.2, 0.8, 0.2, 1, duration: 0.2).delay(0.04 + 0.03 * Double(index))
+    }
+
     // The design has no command or dismissal track. These short, related
     // defaults implement the requested interactive transitions.
     static let command = Animation.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.14)

@@ -872,6 +872,83 @@
         "viewBox": "0 0 16 16"
       },
       "bytes": 438
+    },
+    "05e85.svg": {
+      "aliases": [
+        "new-menu-reference:imgIconNewSpace"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 1110
+    },
+    "6d64c.svg": {
+      "aliases": [
+        "new-menu-reference:imgIcon16"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 854
+    },
+    "36ad5.svg": {
+      "aliases": [
+        "new-menu-reference:imgIcon17"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 551
+    },
+    "b2445.svg": {
+      "aliases": [
+        "new-menu-reference:imgIcon18"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 942
+    },
+    "11aac.svg": {
+      "aliases": [
+        "new-menu-reference:imgIcon19"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 783
+    },
+    "b1a06.svg": {
+      "aliases": [
+        "new-menu-reference:imgIcon20"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 697
+    },
+    "110fc.svg": {
+      "aliases": [
+        "new-menu-reference:imgTail"
+      ],
+      "dimensions": {
+        "width": "12",
+        "height": "6",
+        "viewBox": "0 0 12 6"
+      },
+      "bytes": 412
     }
   }
 }

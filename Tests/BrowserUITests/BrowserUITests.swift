@@ -107,7 +107,8 @@ import XCTest
         XCTAssertTrue(name.waitForExistence(timeout: 5))
         name.click(); name.typeText("Work")
         app.buttons["editor-save"].click()
-        app.buttons["add-space"].click()
+        app.buttons["new-menu"].click()
+        app.buttons["new-menu-space"].click()
         XCTAssertTrue(name.waitForExistence(timeout: 5))
         name.click(); name.typeText("Work Space")
         app.popUpButtons["profile-picker"].click()
@@ -141,6 +142,25 @@ import XCTest
         capture("native-popup")
         app.terminate()
     }
+    func testCommandBarAlwaysShowsFiveRows() throws {
+        launch()
+        XCTAssertTrue(app.webViews.staticTexts["Acceptance Home"].waitForExistence(timeout: 15))
+        app.typeKey("t", modifierFlags: .command)
+        let input = app.textFields["command-input"]
+        XCTAssertTrue(input.waitForExistence(timeout: 5))
+        let list = app.scrollViews.firstMatch
+        XCTAssertEqual(list.frame.height, 214, accuracy: 2)
+        XCTAssertGreaterThanOrEqual(list.buttons.count, 5)
+        // Text that matches nothing must not collapse the list, and Return still searches.
+        input.typeText("zzqq-no-match")
+        XCTAssertTrue(app.buttons["command-navigate"].waitForExistence(timeout: 5))
+        XCTAssertEqual(list.frame.height, 214, accuracy: 2)
+        XCTAssertGreaterThanOrEqual(list.buttons.count, 5)
+        XCTAssertTrue(app.buttons["command-navigate"].isSelected)
+        capture("command-five-rows")
+        app.terminate()
+    }
+
     func testFigmaCommandSiteControlsAndSidebarReveal() throws {
         launch()
         XCTAssertTrue(app.webViews.staticTexts["Acceptance Home"].waitForExistence(timeout: 15))

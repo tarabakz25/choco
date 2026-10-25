@@ -8,7 +8,6 @@ struct BrowserSidebar: View {
     @Bindable var model: AppModel
     @State private var collapsedFolders: Set<UUID> = []
     @State private var pinnedCollapsed = false
-    @State private var hoveredTabID: UUID?
     @State private var urlFieldPressed = false
     @AppStorage("choco.hidesEmptyFavoritesHint") private var hidesFavoritesHint = false
     @State private var favoritesDropTargeted = false
@@ -362,13 +361,12 @@ struct BrowserSidebar: View {
                     Spacer(minLength: 0)
                 }
                 .padding(.leading, 10).padding(.trailing, 6).frame(height: 32)
-                .background(isSelected(tab) ? ChocoTheme.selected : hoveredTabID == tab.id ? ChocoTheme.tile : Color.clear, in: RoundedRectangle(cornerRadius: 8))
+                .background(isSelected(tab) ? ChocoTheme.selected : Color.clear, in: RoundedRectangle(cornerRadius: 8))
                 .contentShape(Rectangle())
             }
             .buttonStyle(ChocoPressStyle(radius: 8))
             .accessibilityIdentifier("select-tab-\(tab.id)")
         }
-        .onHover { hoveredTabID = $0 ? tab.id : nil }
         .accessibilityElement(children: .contain)
         .accessibilityLabel(tab.displayTitle)
         .accessibilityIdentifier("tab-\(tab.id)")
@@ -460,9 +458,18 @@ struct BrowserSidebar: View {
             } label: { DesignIcon("a3077", size: 16).opacity(0.7).frame(width: 26, height: 26) }
                 .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
                 .help("Spaceとプロファイル").accessibilityLabel("Spaceとプロファイル").accessibilityIdentifier("space-menu")
-            Button { model.editor = .space(nil) } label: {
-                DesignIcon("77a3c", size: 16).opacity(0.7).frame(width: 26, height: 26)
-            }.buttonStyle(ChocoPressStyle()).help("Spaceを作成").accessibilityLabel("Spaceを作成").accessibilityIdentifier("add-space")
+            Button { model.showsNewMenu.toggle() } label: {
+                // Figma "Plus Button (rotates to x)": a 45° turn while the New menu is open.
+                DesignIcon("77a3c", size: 16).opacity(0.7)
+                    .rotationEffect(.degrees(model.showsNewMenu ? 45 : 0))
+                    .animation(reduceMotion ? nil : ChocoMotion.newMenuEntry, value: model.showsNewMenu)
+                    .frame(width: 26, height: 26)
+            }
+            .buttonStyle(ChocoPressStyle())
+            .anchorPreference(key: NewMenuAnchorKey.self, value: .bounds) { $0 }
+            .help("新規作成").accessibilityLabel("新規作成")
+            .accessibilityValue(model.showsNewMenu ? "メニューを表示中" : "")
+            .accessibilityIdentifier("new-menu")
         }.frame(height: 26)
     }
 }
@@ -470,17 +477,30 @@ struct BrowserSidebar: View {
 /// The URL field's trailing 20pt tile (Figma `site controls`): lit while pressed and while its popover is open.
 private struct SiteControlsButtonStyle: ButtonStyle {
     var isActive: Bool
-    @ChocoReducedMotion private var reduceMotion: Bool
 
     func makeBody(configuration: Configuration) -> some View {
-        let lit = configuration.isPressed || isActive
-        configuration.label
-            .background {
-                RoundedRectangle(cornerRadius: 5).fill(ChocoTheme.selected).frame(width: 20, height: 20)
-                    .opacity(lit ? 1 : 0)
-            }
-            .contentShape(Rectangle())
-            .animation(reduceMotion ? nil : .timingCurve(0.2, 0.8, 0.2, 1, duration: lit ? 0.07 : 0.23), value: lit)
+        TileBody(configuration: configuration, isActive: isActive)
+    }
+
+    private struct TileBody: View {
+        let configuration: Configuration
+        let isActive: Bool
+        @ChocoReducedMotion private var reduceMotion: Bool
+        @State private var hovering = false
+
+        var body: some View {
+            let lit = configuration.isPressed || isActive
+            configuration.label
+                .background {
+                    RoundedRectangle(cornerRadius: 5).fill(lit ? ChocoTheme.selected : ChocoTheme.field)
+                        .frame(width: 20, height: 20)
+                        .opacity(lit || hovering ? 1 : 0)
+                }
+                .contentShape(Rectangle())
+                .onHover { hovering = $0 }
+                .animation(reduceMotion ? nil : .timingCurve(0.2, 0.8, 0.2, 1, duration: lit ? 0.07 : 0.23), value: lit)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hovering)
+        }
     }
 }
 

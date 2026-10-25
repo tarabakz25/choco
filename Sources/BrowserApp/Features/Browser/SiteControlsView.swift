@@ -108,11 +108,11 @@ struct SiteControlsView: View {
                 ShareLink(item: pageURL) {
                     quickTile { DesignIcon("d2996", size: 15) }
                 }
-                .buttonStyle(.plain).accessibilityLabel("ページを共有")
+                .buttonStyle(ChocoPressStyle(radius: 7, tint: .white.opacity(0.2), hoverTint: .white.opacity(0.1))).accessibilityLabel("ページを共有")
                 .accessibilityIdentifier("site-share").help("ページを共有")
             } else {
                 Button {} label: { quickTile { DesignIcon("d2996", size: 15) } }
-                    .buttonStyle(.plain).disabled(true).accessibilityLabel("ページを共有")
+                    .buttonStyle(ChocoPressStyle(radius: 7, tint: .white.opacity(0.2), hoverTint: .white.opacity(0.1))).disabled(true).accessibilityLabel("ページを共有")
             }
             Button { copyURL() } label: {
                 quickTile {
@@ -121,14 +121,14 @@ struct SiteControlsView: View {
                 }
                 .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(copyFocused ? .white.opacity(0.75) : .clear, lineWidth: 1))
             }
-            .buttonStyle(.plain).focusable().focused($copyFocused).disabled(pageURL == nil)
+            .buttonStyle(ChocoPressStyle(radius: 7, tint: .white.opacity(0.2), hoverTint: .white.opacity(0.1))).focusable().focused($copyFocused).disabled(pageURL == nil)
             .accessibilityLabel(copied ? "URLをコピーしました" : "URLをコピー")
             .accessibilityIdentifier("site-copy-url").help("URLをコピー")
             Button { togglePinned() } label: {
                 quickTile {
                     Image(systemName: currentTab?.isPinned == true ? "pin.fill" : "pin").font(.system(size: 13))
                 }
-            }.buttonStyle(.plain).disabled(pageURL == nil)
+            }.buttonStyle(ChocoPressStyle(radius: 7, tint: .white.opacity(0.2), hoverTint: .white.opacity(0.1))).disabled(pageURL == nil)
                 .accessibilityLabel(currentTab?.isPinned == true ? "固定を解除" : "タブを固定")
                 .accessibilityIdentifier("site-quick-pin").help(currentTab?.isPinned == true ? "固定を解除" : "タブを固定")
             Button { toggleFavorite() } label: {
@@ -136,7 +136,7 @@ struct SiteControlsView: View {
                     if matchingFavorite == nil { DesignIcon("77a3c", size: 15) }
                     else { Image(systemName: "star.fill").font(.system(size: 13)) }
                 }
-            }.buttonStyle(.plain).disabled(!canToggleFavorite)
+            }.buttonStyle(ChocoPressStyle(radius: 7, tint: .white.opacity(0.2), hoverTint: .white.opacity(0.1))).disabled(!canToggleFavorite)
                 .accessibilityLabel(matchingFavorite == nil ? "お気に入りに追加" : "お気に入りを解除")
                 .accessibilityIdentifier("site-quick-favorite").help("お気に入り")
         }.frame(maxWidth: .infinity)
@@ -257,8 +257,8 @@ struct SiteControlsView: View {
 private struct SiteSettingsButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .background(configuration.isPressed ? .white.opacity(0.12) : .clear, in: RoundedRectangle(cornerRadius: 8))
+        ChocoPressStyle(radius: 8, tint: .white.opacity(0.12), hoverTint: .white.opacity(0.06))
+            .makeBody(configuration: configuration)
             .opacity(isEnabled ? 1 : 0.45)
     }
 }

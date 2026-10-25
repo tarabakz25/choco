@@ -17,32 +17,51 @@ struct CommandPalette: View {
         }
     }
     private enum Command { case newTab, archive, restore, sidebar, clear, folder, space }
-    private var results: [Result] {
+    /// The Figma palette always shows five rows (`visibleRows`). Matches come first; when fewer than
+    /// five match, the remaining slots are filled with other tabs, then other commands, so the list
+    /// never collapses. `matchCount` tells filler apart from real matches.
+    private static let visibleRows = 5
+    private var resultSet: (results: [Result], matchCount: Int) {
         let query = model.commandText.trimmingCharacters(in: .whitespacesAndNewlines)
-        let tabs = model.state.tabs.filter {
-            query.isEmpty || "\($0.displayTitle) \($0.url)".localizedCaseInsensitiveContains(query)
-        }.sorted { lhs, rhs in
+        func matches(_ text: String) -> Bool { query.isEmpty || text.localizedCaseInsensitiveContains(query) }
+        let ordered = model.state.tabs.sorted { lhs, rhs in
             let leftHere = lhs.spaceID == model.state.selectedSpaceID
             let rightHere = rhs.spaceID == model.state.selectedSpaceID
             return leftHere != rightHere ? leftHere : false
-        }.prefix(7).map { tab in
-            Result.tab(tab, model.state.spaces.first(where: { $0.id == tab.spaceID })?.name ?? "")
         }
+        func spaceName(_ tab: BrowserTab) -> String { model.state.spaces.first(where: { $0.id == tab.spaceID })?.name ?? "" }
         let commands: [(String, String, Command)] = [
             ("新しいタブ", "plus", .newTab), ("アーカイブを開く", "archivebox", .archive),
             ("閉じたタブを復元", "arrow.uturn.backward", .restore), ("サイドバーを切り替える", "sidebar.left", .sidebar),
             ("Todayをすべて閉じる", "xmark", .clear), ("フォルダを作成", "folder.badge.plus", .folder),
             ("Spaceを作成", "plus.square", .space)
         ]
-        return tabs + commands.filter { query.isEmpty || $0.0.localizedCaseInsensitiveContains(query) }.prefix(5).map { .command($0.0, $0.1, $0.2) }
+        let matchedTabs = ordered.filter { matches("\($0.displayTitle) \($0.url)") }.prefix(7)
+        let matchedCommands = commands.filter { matches($0.0) }.prefix(5)
+        var results = matchedTabs.map { Result.tab($0, spaceName($0)) }
+            + matchedCommands.map { Result.command($0.0, $0.1, $0.2) }
+        let matchCount = results.count
+        var missing = Self.visibleRows - (showsNavigationResult ? 1 : 0) - results.count
+        if missing > 0 {
+            let used = Set(matchedTabs.map(\.id))
+            let spareTabs = ordered.filter { !used.contains($0.id) }.prefix(missing)
+            results += spareTabs.map { Result.tab($0, spaceName($0)) }
+            missing -= spareTabs.count
+        }
+        if missing > 0 {
+            let used = Set(matchedCommands.map(\.0))
+            results += commands.filter { !used.contains($0.0) }.prefix(missing).map { Result.command($0.0, $0.1, $0.2) }
+        }
+        return (results, matchCount)
     }
+    private var results: [Result] { resultSet.results }
 
     private var showsNavigationResult: Bool {
         model.commandMode == .navigate || !model.commandText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
     private var firstSelection: Int { showsNavigationResult || results.isEmpty ? 0 : 1 }
-    private var preferredSelection: Int { model.commandMode == .navigate || results.isEmpty ? 0 : 1 }
-    private var renderedResultCount: Int { results.count + (showsNavigationResult ? 1 : 0) }
+    /// Filler rows are never preselected: with no real match, Return still searches or opens the typed text.
+    private var preferredSelection: Int { model.commandMode == .navigate || resultSet.matchCount == 0 ? 0 : 1 }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -78,7 +97,7 @@ struct CommandPalette: View {
                     }
                 }
                 .scrollIndicators(.hidden)
-                .frame(height: min(max(0, CGFloat(renderedResultCount) * 43 - 1), 214))
+                .frame(height: CGFloat(Self.visibleRows) * 43 - 1)
                 .onChange(of: selection) { _, value in proxy.scrollTo(value, anchor: .center) }
             }
             .padding(.horizontal, 6).padding(.top, 6).padding(.bottom, 8)
