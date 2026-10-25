@@ -1,4 +1,5 @@
 import Foundation
+import BrowserLocalization
 
 extension BrowserState {
     /// Repairs structural references without silently discarding usable tabs.
@@ -15,7 +16,7 @@ extension BrowserState {
             var replacement = UUID()
             while profiles.contains(where: { $0.id == replacement }) { replacement = UUID() }
             if let index = profiles.firstIndex(where: { $0.id == zeroID }) { profiles[index].id = replacement }
-            else { profiles.append(BrowserProfile(id: replacement, name: "復旧したプロファイル")) }
+            else { profiles.append(BrowserProfile(id: replacement, name: Localizer().text("Recovered Profile"))) }
             for i in spaces.indices where spaces[i].profileID == zeroID { spaces[i].profileID = replacement }
         }
         // A missing profile record must not change a Space's login identity.
@@ -23,14 +24,14 @@ extension BrowserState {
         // that record instead of connecting the Space to another user's store.
         var profileIDs = Set(profiles.map(\.id))
         for space in spaces where !profileIDs.contains(space.profileID) {
-            profiles.append(BrowserProfile(id: space.profileID, name: "復旧したプロファイル"))
+            profiles.append(BrowserProfile(id: space.profileID, name: Localizer().text("Recovered Profile")))
             profileIDs.insert(space.profileID)
         }
-        if profiles.isEmpty { profiles = [BrowserProfile(name: "デフォルト")] }
-        for i in profiles.indices { profiles[i].name = nonempty(profiles[i].name, fallback: "プロファイル") }
-        if spaces.isEmpty { spaces = [BrowserSpace(name: "マイスペース", profileID: profiles[0].id)] }
+        if profiles.isEmpty { profiles = [BrowserProfile(name: Localizer().text("Default"))] }
+        for i in profiles.indices { profiles[i].name = nonempty(profiles[i].name, fallback: Localizer().text("Profile")) }
+        if spaces.isEmpty { spaces = [BrowserSpace(name: Localizer().text("My Space"), profileID: profiles[0].id)] }
         for i in spaces.indices {
-            spaces[i].name = nonempty(spaces[i].name, fallback: "スペース")
+            spaces[i].name = nonempty(spaces[i].name, fallback: Localizer().text("Space"))
             spaces[i].icon = nonempty(spaces[i].icon, fallback: "🌐")
             spaces[i].colorHex = normalizedColor(spaces[i].colorHex)
         }
@@ -40,16 +41,16 @@ extension BrowserState {
         var knownSpaceIDs = Set(spaces.map(\.id))
         let referencedSpaceIDs = tabs.map(\.spaceID) + archive.map(\.tab.spaceID) + folders.map(\.spaceID)
         for id in referencedSpaceIDs where !knownSpaceIDs.contains(id) {
-            let profile = BrowserProfile(name: "復旧したプロファイル")
+            let profile = BrowserProfile(name: Localizer().text("Recovered Profile"))
             profiles.append(profile)
-            spaces.append(BrowserSpace(id: id, name: "復旧したスペース", profileID: profile.id))
+            spaces.append(BrowserSpace(id: id, name: Localizer().text("Recovered Space"), profileID: profile.id))
             knownSpaceIDs.insert(id)
         }
         let spaceIDs = Set(spaces.map(\.id))
         if !spaceIDs.contains(selectedSpaceID) { selectedSpaceID = spaces[0].id }
         folders = unique(folders)
         for i in folders.indices {
-            folders[i].name = nonempty(folders[i].name, fallback: "フォルダ")
+            folders[i].name = nonempty(folders[i].name, fallback: Localizer().text("Folder"))
         }
         var folderMap = Dictionary(uniqueKeysWithValues: folders.map { ($0.id, $0) })
         for i in folders.indices {
@@ -105,7 +106,7 @@ extension BrowserState {
                 if selectedTabID != split.leadingTabID && selectedTabID != split.trailingTabID { selectedTabID = split.leadingTabID }
             }
         }
-        return self == original ? [] : ["保存データの参照または値を修復しました。"]
+        return self == original ? [] : [Localizer().text("Saved data references or values were repaired.")]
     }
 }
 

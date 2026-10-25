@@ -1,8 +1,11 @@
+import BrowserLocalization
 import BrowserCore
 import SwiftUI
 import UniformTypeIdentifiers
 
 struct BrowserSidebar: View {
+    @AppStorage(AppLanguage.storageKey, store: AppLanguage.defaults) private var language = AppLanguage.current.rawValue
+    private var l10n: Localizer { Localizer(language: AppLanguage(rawValue: language) ?? .current) }
     @Bindable var model: AppModel
     @State private var collapsedFolders: Set<UUID> = []
     @State private var pinnedCollapsed = false
@@ -12,7 +15,7 @@ struct BrowserSidebar: View {
             HStack {
                 Spacer()
                 Button { model.send(.toggleSidebar) } label: { Image(systemName: "sidebar.left") }
-                    .help("サイドバーを隠す (⌘S)")
+                    .help(l10n.text("Hide Sidebar (⌘S)"))
             }.buttonStyle(.borderless).padding(.horizontal, 16).frame(height: 44)
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
@@ -20,7 +23,7 @@ struct BrowserSidebar: View {
                     Button { model.showCommand(.newTab) } label: {
                         HStack {
                             Image(systemName: "plus")
-                            Text("新しいタブ")
+                            Text(l10n.text("New Tab"))
                             Spacer()
                             Text("⌘T").font(.caption).foregroundStyle(.secondary)
                         }.padding(.vertical, 9).padding(.horizontal, 10)
@@ -29,18 +32,18 @@ struct BrowserSidebar: View {
                     VStack(alignment: .leading, spacing: 5) {
                         HStack {
                             Button { pinnedCollapsed.toggle() } label: {
-                                Label("固定タブ", systemImage: pinnedCollapsed ? "chevron.right" : "chevron.down")
+                                Label(l10n.text("Pinned"), systemImage: pinnedCollapsed ? "chevron.right" : "chevron.down")
                                     .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                             }.buttonStyle(.plain)
                             Spacer()
                             Button { model.editor = .folder(nil) } label: { Image(systemName: "folder.badge.plus") }
-                                .buttonStyle(.borderless).help("フォルダを作成").accessibilityIdentifier("add-folder")
+                                .buttonStyle(.borderless).help(l10n.text("Create Folder")).accessibilityIdentifier("add-folder")
                         }.padding(.horizontal, 8)
                         if !pinnedCollapsed {
                             ForEach(rootFolders) { folder in folderRow(folder, depth: 0) }
                             ForEach(spaceTabs.filter { $0.isPinned && $0.folderID == nil }) { tab in tabRow(tab) }
                             if rootFolders.isEmpty && !spaceTabs.contains(where: \.isPinned) {
-                                Text("タブを固定すると、ここに残ります")
+                                Text(l10n.text("Pin tabs to keep them here"))
                                     .font(.caption).foregroundStyle(.tertiary).padding(8)
                             }
                         }
@@ -50,13 +53,13 @@ struct BrowserSidebar: View {
                         HStack {
                             Text("Today").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                             Spacer()
-                            Button("すべて閉じる") { model.send(.clearToday) }
+                            Button(l10n.text("Close All")) { model.send(.clearToday) }
                                 .font(.caption2).buttonStyle(.plain).foregroundStyle(.secondary)
                                 .disabled(!spaceTabs.contains { !$0.isPinned })
                         }.padding(.horizontal, 8)
                         ForEach(spaceTabs.filter { !$0.isPinned }) { tab in tabRow(tab) }
                         if !spaceTabs.contains(where: { !$0.isPinned }) {
-                            Text("いまの作業に使うタブを開きましょう")
+                            Text(l10n.text("Open a tab to get started"))
                                 .font(.caption).foregroundStyle(.tertiary).padding(8)
                         }
                     }
@@ -79,15 +82,15 @@ struct BrowserSidebar: View {
                 }.buttonStyle(.plain).help(favorite.title)
                     .accessibilityLabel(favorite.title).accessibilityIdentifier("favorite-\(favorite.id)")
                     .contextMenu {
-                        Button("編集…") { model.editor = .favorite(favorite.id) }
-                        Button("削除", role: .destructive) { model.send(.deleteFavorite(favorite.id)) }
+                        Button(l10n.text("Edit…")) { model.editor = .favorite(favorite.id) }
+                        Button(l10n.text("Delete"), role: .destructive) { model.send(.deleteFavorite(favorite.id)) }
                     }
             }
             if model.state.favorites.count < 12 {
                 Button { model.editor = .favorite(nil) } label: {
                     Image(systemName: "plus").foregroundStyle(.secondary).frame(maxWidth: .infinity).frame(height: 43)
                         .background(.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 10))
-                }.buttonStyle(.plain).help("お気に入りを追加").accessibilityIdentifier("add-favorite")
+                }.buttonStyle(.plain).help(l10n.text("Add Favorite")).accessibilityIdentifier("add-favorite")
             }
         }
     }
@@ -106,22 +109,22 @@ struct BrowserSidebar: View {
                 }.padding(.vertical, 7).padding(.horizontal, 8).contentShape(Rectangle())
             }.buttonStyle(.plain).accessibilityIdentifier("folder-\(folder.id)")
                 .contextMenu {
-                    Button("名前を変更…") { model.editor = .renameFolder(folder.id) }
-                    Button("サブフォルダを作成…") { model.editor = .folder(folder.id) }
-                    Menu("移動") {
-                        Button("固定タブの最上位へ") { model.send(.moveFolder(folder.id, parentID: nil, beforeID: nil)) }
+                    Button(l10n.text("Rename…")) { model.editor = .renameFolder(folder.id) }
+                    Button(l10n.text("Create Subfolder…")) { model.editor = .folder(folder.id) }
+                    Menu(l10n.text("Move")) {
+                        Button(l10n.text("Top Level of Pinned Tabs")) { model.send(.moveFolder(folder.id, parentID: nil, beforeID: nil)) }
                             .disabled(folder.parentID == nil)
                         ForEach(validFolderParents(for: folder)) { parent in
                             Button(folderPath(parent)) { model.send(.moveFolder(folder.id, parentID: parent.id, beforeID: nil)) }
                                 .disabled(folder.parentID == parent.id)
                         }
                     }
-                    Button("上へ移動") { moveFolder(folder, offset: -1) }
+                    Button(l10n.text("Move Up")) { moveFolder(folder, offset: -1) }
                         .disabled(folderSiblingIndex(folder) == 0)
-                    Button("下へ移動") { moveFolder(folder, offset: 1) }
+                    Button(l10n.text("Move Down")) { moveFolder(folder, offset: 1) }
                         .disabled(folderSiblingIndex(folder) >= folderSiblings(folder).count - 1)
                     Divider()
-                    Button("フォルダを削除", role: .destructive) { model.send(.deleteFolder(folder.id)) }
+                    Button(l10n.text("Delete Folder"), role: .destructive) { model.send(.deleteFolder(folder.id)) }
                 }
                 .dropDestination(for: String.self) { values, _ in
                     guard let string = values.first, let id = UUID(uuidString: string) else { return false }
@@ -183,18 +186,18 @@ struct BrowserSidebar: View {
             Button { model.select(tab) } label: {
                 HStack(spacing: 8) {
                     Image(systemName: tab.isPinned ? "pin" : "globe").font(.system(size: 12)).foregroundStyle(.secondary).frame(width: 16)
-                    Text(tab.displayTitle).font(.system(size: 13)).lineLimit(1).truncationMode(.tail)
+                    Text(tab.localizedTitle(using: l10n)).font(.system(size: 13)).lineLimit(1).truncationMode(.tail)
                     Spacer(minLength: 0)
                 }.contentShape(Rectangle())
             }.buttonStyle(.plain).accessibilityIdentifier("select-tab-\(tab.id)")
             Button { model.send(.closeTab(tab.id)) } label: { Image(systemName: "xmark").font(.system(size: 10, weight: .medium)) }
-                .buttonStyle(.plain).foregroundStyle(.secondary).help(tab.isPinned ? "閉じる（固定は残ります）" : "アーカイブへ移動")
+                .buttonStyle(.plain).foregroundStyle(.secondary).help(tab.isPinned ? l10n.text("Close (Keep Pinned)") : l10n.text("Move to Archive"))
         }
         .padding(.horizontal, 9).padding(.vertical, 9)
         .background(.primary.opacity(isSelected(tab) ? 0.1 : 0), in: RoundedRectangle(cornerRadius: 8))
         .contentShape(Rectangle())
         .accessibilityElement(children: .contain)
-        .accessibilityLabel(tab.displayTitle)
+        .accessibilityLabel(tab.localizedTitle(using: l10n))
         .accessibilityIdentifier("tab-\(tab.id)")
         .contextMenu { tabMenu(tab) }
         .draggable(tab.id.uuidString)
@@ -209,17 +212,17 @@ struct BrowserSidebar: View {
     }
 
     @ViewBuilder private func tabMenu(_ tab: BrowserTab) -> some View {
-        Button("名前を変更…") { model.editor = .tabName(tab.id) }
-        Button("複製") { model.send(.duplicateTab(tab.id)) }
+        Button(l10n.text("Rename…")) { model.editor = .tabName(tab.id) }
+        Button(l10n.text("Duplicate")) { model.send(.duplicateTab(tab.id)) }
         if tab.isPinned {
-            Button("固定を解除") { model.send(.unpinTab(tab.id)) }
-            Button("固定したURLに戻る") { model.send(.resetPinnedTab(tab.id)) }
-            Button("固定URLを編集…") { model.editor = .pinnedURL(tab.id) }
-        } else { Button("固定する") { model.send(.pinTab(tab.id)) } }
-        Menu("移動") {
+            Button(l10n.text("Unpin")) { model.send(.unpinTab(tab.id)) }
+            Button(l10n.text("Reset to Pinned URL")) { model.send(.resetPinnedTab(tab.id)) }
+            Button(l10n.text("Edit Pinned URL…")) { model.editor = .pinnedURL(tab.id) }
+        } else { Button(l10n.text("Pin")) { model.send(.pinTab(tab.id)) } }
+        Menu(l10n.text("Move")) {
             ForEach(model.state.spaces) { space in
                 Menu("\(space.icon) \(space.name)") {
-                    Button("フォルダ外へ") { model.send(.moveTab(tab.id, spaceID: space.id, folderID: nil)) }
+                    Button(l10n.text("Outside Folders")) { model.send(.moveTab(tab.id, spaceID: space.id, folderID: nil)) }
                     ForEach(model.state.folders.filter { $0.spaceID == space.id }) { folder in
                         Button(folder.name) { model.send(.moveTab(tab.id, spaceID: space.id, folderID: folder.id)) }
                     }
@@ -227,10 +230,10 @@ struct BrowserSidebar: View {
             }
         }
         if let selected = model.selectedTab, selected.id != tab.id, selected.spaceID == tab.spaceID {
-            Button("このタブと分割") { model.split(with: tab) }
+            Button(l10n.text("Split with This Tab")) { model.split(with: tab) }
         }
         Divider()
-        Button(tab.isPinned ? "固定タブを削除" : "アーカイブへ移動", role: .destructive) {
+        Button(tab.isPinned ? l10n.text("Delete Pinned Tab") : l10n.text("Move to Archive"), role: .destructive) {
             model.send(tab.isPinned ? .deleteTab(tab.id) : .closeTab(tab.id))
         }
     }
@@ -246,12 +249,12 @@ struct BrowserSidebar: View {
                 }
                 Spacer()
                 Menu {
-                    Button("Spaceを編集…") { model.editor = .space(model.state.selectedSpaceID) }.accessibilityIdentifier("edit-space")
-                    Button("Spaceを追加…") { model.editor = .space(nil) }.accessibilityIdentifier("create-space")
-                    Button("プロファイルを追加…") { model.editor = .profile }.accessibilityIdentifier("create-profile")
+                    Button(l10n.text("Edit Space…")) { model.editor = .space(model.state.selectedSpaceID) }.accessibilityIdentifier("edit-space")
+                    Button(l10n.text("Add Space…")) { model.editor = .space(nil) }.accessibilityIdentifier("create-space")
+                    Button(l10n.text("Add Profile…")) { model.editor = .profile }.accessibilityIdentifier("create-profile")
                     Divider()
-                    Button("アーカイブ…") { model.showsArchive = true }.accessibilityIdentifier("open-archive")
-                    SettingsLink { Text("設定…") }
+                    Button(l10n.text("Archive…")) { model.showsArchive = true }.accessibilityIdentifier("open-archive")
+                    SettingsLink { Text(l10n.text("Settings…")) }
                 } label: { Image(systemName: "ellipsis.circle") }.menuStyle(.borderlessButton).fixedSize().accessibilityIdentifier("space-menu")
             }
             ScrollView(.horizontal, showsIndicators: false) {
@@ -267,7 +270,7 @@ struct BrowserSidebar: View {
                                 model.send(.moveTab(id, spaceID: space.id, folderID: nil)); return true
                             }
                     }
-                    Button { model.editor = .space(nil) } label: { Image(systemName: "plus").frame(width: 28, height: 30) }.buttonStyle(.plain).help("Spaceを作成").accessibilityIdentifier("add-space")
+                    Button { model.editor = .space(nil) } label: { Image(systemName: "plus").frame(width: 28, height: 30) }.buttonStyle(.plain).help(l10n.text("Create Space")).accessibilityIdentifier("add-space")
                 }
             }
         }.padding(14).background(.primary.opacity(0.025))

@@ -1,8 +1,11 @@
+import BrowserLocalization
 import AppKit
 import BrowserCore
 import SwiftUI
 
 struct CommandPalette: View {
+    @AppStorage(AppLanguage.storageKey, store: AppLanguage.defaults) private var language = AppLanguage.current.rawValue
+    private var l10n: Localizer { Localizer(language: AppLanguage(rawValue: language) ?? .current) }
     @Bindable var model: AppModel
     @FocusState private var focused: Bool
     @State private var selection = 0
@@ -17,7 +20,7 @@ struct CommandPalette: View {
     private var results: [Result] {
         let query = model.commandText.trimmingCharacters(in: .whitespacesAndNewlines)
         let tabs = model.state.tabs.filter {
-            query.isEmpty || "\($0.displayTitle) \($0.url)".localizedCaseInsensitiveContains(query)
+            query.isEmpty || "\($0.localizedTitle(using: l10n)) \($0.url)".localizedCaseInsensitiveContains(query)
         }.sorted { lhs, rhs in
             let leftHere = lhs.spaceID == model.state.selectedSpaceID
             let rightHere = rhs.spaceID == model.state.selectedSpaceID
@@ -26,10 +29,10 @@ struct CommandPalette: View {
             Result.tab(tab, model.state.spaces.first(where: { $0.id == tab.spaceID })?.name ?? "")
         }
         let commands: [(String, String, Command)] = [
-            ("新しいタブ", "plus", .newTab), ("アーカイブを開く", "archivebox", .archive),
-            ("閉じたタブを復元", "arrow.uturn.backward", .restore), ("サイドバーを切り替える", "sidebar.left", .sidebar),
-            ("Todayをすべて閉じる", "xmark", .clear), ("フォルダを作成", "folder.badge.plus", .folder),
-            ("Spaceを作成", "plus.square", .space)
+            (l10n.text("New Tab"), "plus", .newTab), (l10n.text("Open Archive"), "archivebox", .archive),
+            (l10n.text("Restore Closed Tab"), "arrow.uturn.backward", .restore), (l10n.text("Toggle Sidebar"), "sidebar.left", .sidebar),
+            (l10n.text("Close All Today Tabs"), "xmark", .clear), (l10n.text("Create Folder"), "folder.badge.plus", .folder),
+            (l10n.text("Create Space"), "plus.square", .space)
         ]
         return tabs + commands.filter { query.isEmpty || $0.0.localizedCaseInsensitiveContains(query) }.prefix(5).map { .command($0.0, $0.1, $0.2) }
     }
@@ -38,7 +41,7 @@ struct CommandPalette: View {
         VStack(spacing: 0) {
             HStack(spacing: 12) {
                 Image(systemName: "magnifyingglass").font(.title3).foregroundStyle(.secondary)
-                TextField("検索、URL、タブ、コマンド", text: $model.commandText)
+                TextField(l10n.text("Search, URL, tabs, commands"), text: $model.commandText)
                     .font(.system(size: 19)).textFieldStyle(.plain).focused($focused)
                     .accessibilityIdentifier("command-input")
                     .onSubmit { submitInput() }
@@ -57,28 +60,28 @@ struct CommandPalette: View {
                 Button { model.commandMode = nil } label: { Text("esc").font(.caption).foregroundStyle(.secondary) }.buttonStyle(.plain)
             }.padding(22)
             if let error = model.commandError {
-                Label(error, systemImage: "exclamationmark.circle").font(.caption).foregroundStyle(.red).padding(.horizontal, 22).padding(.bottom, 12)
+                Label(l10n.text(error), systemImage: "exclamationmark.circle").font(.caption).foregroundStyle(.red).padding(.horizontal, 22).padding(.bottom, 12)
             }
             Divider()
             VStack(spacing: 3) {
                 Button { model.open(model.commandText, newTab: model.commandMode == .newTab) } label: {
-                    resultRow(title: model.commandText.isEmpty ? "検索またはURLを入力" : model.commandText,
-                              subtitle: model.commandMode == .newTab ? "新しいタブで開く" : "現在のタブで開く",
+                    resultRow(title: model.commandText.isEmpty ? l10n.text("Search or enter URL") : model.commandText,
+                              subtitle: model.commandMode == .newTab ? l10n.text("Open in New Tab") : l10n.text("Open in Current Tab"),
                               icon: "arrow.up.right", selected: selection == 0)
                 }.buttonStyle(.plain).disabled(model.commandText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 ForEach(Array(results.enumerated()), id: \.element.id) { index, result in
                     Button { activate(result) } label: {
                         switch result {
                         case .tab(let tab, let space):
-                            resultRow(title: tab.displayTitle, subtitle: "開いているタブ · \(space)", icon: "rectangle.on.rectangle", selected: selection == index + 1)
+                            resultRow(title: tab.localizedTitle(using: l10n), subtitle: l10n.format("Open Tab · %@", space), icon: "rectangle.on.rectangle", selected: selection == index + 1)
                         case .command(let title, let icon, _):
-                            resultRow(title: title, subtitle: "コマンド", icon: icon, selected: selection == index + 1)
+                            resultRow(title: title, subtitle: l10n.text("Command"), icon: icon, selected: selection == index + 1)
                         }
                     }.buttonStyle(.plain)
                 }
             }.padding(8)
             HStack {
-                Text("↑↓ 選択   ↩ 実行").font(.caption2)
+                Text(l10n.text("↑↓ Select   ↩ Run")).font(.caption2)
                 Spacer()
                 Text("\(model.selectedSpace?.icon ?? "") \(model.selectedSpace?.name ?? "")").font(.caption2)
             }.foregroundStyle(.secondary).padding(.horizontal, 18).padding(.vertical, 10)

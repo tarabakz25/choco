@@ -46,6 +46,14 @@ open build/choco.app
 
 Space・Profileの作成は左下のメニューから、タブとフォルダの整理は右クリックメニューから行えます。フォルダは親変更と兄弟順の変更に対応します。
 
+## 表示言語
+
+設定（⌘,）の「言語 / Language」で日本語とEnglishを切り替えられます。選択は保存され、主要画面・アプリ独自のメニュー・コマンド検索に再起動せず反映されます。初回はmacOSの優先言語から日本語または英語を選び、どちらも含まれない場合は英語を使用します。
+
+Webページの内容、ユーザーが付けた名前、既存のSpace・Profile名は変更しません。macOS標準のメニューや許可ダイアログ、OS由来のエラー詳細はシステムの言語設定に従います。既に表示中のWebKit・保存エラーは発生時の言語を保持します。
+
+翻訳は`Sources/BrowserLocalization/Resources/{ja,en}.lproj/Localizable.strings`で管理します。新しいUI文字列は共通の`Localizer`を通し、両言語の翻訳を追加してください。
+
 ## データとプライバシー
 
 タブ構成はApplication Support内の`OssArc/state.json`へ保存します。アプリをサンドボックス付きで起動した場合はアプリ専用コンテナ内になります。WebサイトのCookieなどはProfileごとにWebKitの永続データストアへ保存します。別Profileへの移動ではログイン状態をコピーしません。お気に入りのリンク定義は全Space共通、実際の閲覧状態はProfileごとです。

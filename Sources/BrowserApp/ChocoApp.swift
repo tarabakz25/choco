@@ -1,15 +1,28 @@
+import BrowserLocalization
 import AppKit
 import BrowserCore
 import SwiftUI
 
 @main @MainActor struct ChocoApp: App {
+    @AppStorage(AppLanguage.storageKey, store: AppLanguage.defaults) private var language = AppLanguage.current.rawValue
+    private var l10n: Localizer { Localizer(language: AppLanguage(rawValue: language) ?? .current) }
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
-    @State private var model = AppModel()
+    @State private var model: AppModel
     @AppStorage("appearance") private var appearance = "system"
+
+    init() {
+        let arguments = ProcessInfo.processInfo.arguments
+        if let index = arguments.firstIndex(of: "--app-language"), arguments.indices.contains(index + 1),
+           let language = AppLanguage(rawValue: arguments[index + 1]) {
+            AppLanguage.defaults.set(language.rawValue, forKey: AppLanguage.storageKey)
+        }
+        _model = State(initialValue: AppModel())
+    }
 
     var body: some Scene {
         Window("choco", id: "browser") {
             BrowserWindow(model: model)
+                .environment(\.locale, l10n.language.locale)
                 .preferredColorScheme(appearance == "dark" ? .dark : appearance == "light" ? .light : nil)
                 .onAppear { delegate.model = model; delegate.installKeyboardRouting(); NSApplication.shared.setActivationPolicy(.regular); NSApplication.shared.activate(ignoringOtherApps: true) }
         }
@@ -17,52 +30,61 @@ import SwiftUI
         .windowStyle(.hiddenTitleBar)
         .commands {
             CommandGroup(replacing: .newItem) {
-                Button("新しいタブ") { model.showCommand(.newTab) }.keyboardShortcut("t")
-                Button("アドレスを入力") { model.showCommand(.navigate) }.keyboardShortcut("l")
+                Button(l10n.text("New Tab")) { model.showCommand(.newTab) }.keyboardShortcut("t")
+                Button(l10n.text("Enter Address")) { model.showCommand(.navigate) }.keyboardShortcut("l")
             }
             CommandGroup(replacing: .saveItem) {
-                Button("サイドバーを切り替える") { model.send(.toggleSidebar) }.keyboardShortcut("s")
+                Button(l10n.text("Toggle Sidebar")) { model.send(.toggleSidebar) }.keyboardShortcut("s")
             }
             CommandGroup(after: .toolbar) {
-                Button("再読み込み") { model.activeSession?.reload() }.keyboardShortcut("r")
-                Button("前のページ") { model.activeSession?.goBack() }.keyboardShortcut("[", modifiers: .command)
-                Button("次のページ") { model.activeSession?.goForward() }.keyboardShortcut("]", modifiers: .command)
-                Button("ページ内を検索") { model.showsFind.toggle() }.keyboardShortcut("f")
-                Button("閉じたタブを復元") { model.send(.restoreLatestArchive) }.keyboardShortcut("t", modifiers: [.command, .shift])
-                Button("アーカイブ") { model.showsArchive = true }
+                Button(l10n.text("Reload")) { model.activeSession?.reload() }.keyboardShortcut("r")
+                Button(l10n.text("Back")) { model.activeSession?.goBack() }.keyboardShortcut("[", modifiers: .command)
+                Button(l10n.text("Forward")) { model.activeSession?.goForward() }.keyboardShortcut("]", modifiers: .command)
+                Button(l10n.text("Find in Page")) { model.showsFind.toggle() }.keyboardShortcut("f")
+                Button(l10n.text("Restore Closed Tab")) { model.send(.restoreLatestArchive) }.keyboardShortcut("t", modifiers: [.command, .shift])
+                Button(l10n.text("Archive")) { model.showsArchive = true }
             }
             CommandGroup(replacing: .windowArrangement) {
-                Button("現在のタブを閉じる") { model.closeActive() }.keyboardShortcut("w")
+                Button(l10n.text("Close Current Tab")) { model.closeActive() }.keyboardShortcut("w")
             }
         }
-        Settings { BrowserSettings(model: model) }
+        Settings { BrowserSettings(model: model).environment(\.locale, l10n.language.locale) }
     }
 }
 
 struct BrowserSettings: View {
+    @AppStorage(AppLanguage.storageKey, store: AppLanguage.defaults) private var language = AppLanguage.current.rawValue
+    private var l10n: Localizer { Localizer(language: AppLanguage(rawValue: language) ?? .current) }
     @Bindable var model: AppModel
     @AppStorage("appearance") private var appearance = "system"
     var body: some View {
         Form {
-            Section("外観") {
-                Picker("表示", selection: $appearance) {
-                    Text("システムに合わせる").tag("system")
-                    Text("ライト").tag("light")
-                    Text("ダーク").tag("dark")
+            Section(l10n.text("Language")) {
+                Picker(l10n.text("Language"), selection: $language) {
+                    ForEach(AppLanguage.allCases, id: \.rawValue) { option in
+                        Text(verbatim: option.nativeName).tag(option.rawValue)
+                    }
+                }.pickerStyle(.segmented).accessibilityIdentifier("settings-language")
+            }
+            Section(l10n.text("Appearance")) {
+                Picker(l10n.text("Theme"), selection: $appearance) {
+                    Text(l10n.text("System")).tag("system")
+                    Text(l10n.text("Light")).tag("light")
+                    Text(l10n.text("Dark")).tag("dark")
                 }
             }
-            Section("プロファイル") {
+            Section(l10n.text("Profiles")) {
                 ForEach(model.state.profiles) { profile in
                     Label(profile.name, systemImage: "person.crop.circle")
                 }
-                Button("プロファイルを追加…") { model.editor = .profile; NSApp.keyWindow?.close(); NSApp.activate(ignoringOtherApps: true) }
+                Button(l10n.text("Add Profile…")) { model.editor = .profile; NSApp.keyWindow?.close(); NSApp.activate(ignoringOtherApps: true) }
             }
             Section {
-                Text("macOS 15.4以上 · SwiftUI + WebKit · MIT")
-                Text("データはこのMacに保存されます。同期・AI・利用状況の送信はありません。")
+                Text(l10n.text("macOS 15.4 or later · SwiftUI + WebKit · MIT"))
+                Text(l10n.text("Data stays on this Mac. No sync, AI, or usage data is sent."))
                     .foregroundStyle(.secondary)
             }
-        }.formStyle(.grouped).frame(width: 480, height: 370)
+        }.formStyle(.grouped).frame(width: 480, height: 450)
     }
 }
 

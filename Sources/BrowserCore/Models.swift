@@ -1,4 +1,5 @@
 import Foundation
+import BrowserLocalization
 
 public struct BrowserProfile: Codable, Equatable, Identifiable, Sendable {
     public var id: UUID
@@ -92,8 +93,8 @@ public struct BrowserState: Codable, Equatable, Sendable {
     }
 
     public static func initial() -> BrowserState {
-        let profile = BrowserProfile(name: "デフォルト")
-        let space = BrowserSpace(name: "マイスペース", profileID: profile.id)
+        let profile = BrowserProfile(name: Localizer().text("Default"))
+        let space = BrowserSpace(name: Localizer().text("My Space"), profileID: profile.id)
         let tab = BrowserTab(spaceID: space.id)
         return BrowserState(profiles: [profile], spaces: [space], tabs: [tab], selectedSpaceID: space.id, selectedTabID: tab.id)
     }

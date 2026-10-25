@@ -1,0 +1,3 @@
+"NSCameraUsageDescription" = "Use the camera on websites you allow.";
+"NSMicrophoneUsageDescription" = "Use the microphone on websites you allow.";
+"NSLocationWhenInUseUsageDescription" = "Use your location on websites you allow.";

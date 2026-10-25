@@ -1,3 +1,4 @@
+import BrowserLocalization
 import AppKit
 import BrowserCore
 import BrowserRuntime
@@ -5,6 +6,8 @@ import SwiftUI
 import WebKit
 
 struct BrowserWindow: View {
+    @AppStorage(AppLanguage.storageKey, store: AppLanguage.defaults) private var language = AppLanguage.current.rawValue
+    private var l10n: Localizer { Localizer(language: AppLanguage(rawValue: language) ?? .current) }
     @Bindable var model: AppModel
     @State private var sidebarWidth: CGFloat = 260
     @State private var sidebarDragStart: CGFloat?
@@ -24,7 +27,7 @@ struct BrowserWindow: View {
                             if sidebarDragStart == nil { sidebarDragStart = sidebarWidth }
                             sidebarWidth = min(380, max(210, (sidebarDragStart ?? 260) + value.translation.width))
                         }.onEnded { _ in sidebarDragStart = nil })
-                        .accessibilityLabel("サイドバーの幅")
+                        .accessibilityLabel(l10n.text("Sidebar Width"))
                 }
                 VStack(spacing: 0) {
                     toolbar
@@ -32,7 +35,7 @@ struct BrowserWindow: View {
                     if let session = model.activeSession, session.activeDownloadCount > 0 {
                         HStack {
                             Image(systemName: "arrow.down.circle")
-                            Text("ダウンロード中 · \(session.activeDownloadCount)件")
+                            Text(l10n.format("Downloads · %lld", session.activeDownloadCount))
                             if let progress = session.downloadProgress { ProgressView(value: progress).frame(width: 100) }
                             Spacer()
                         }.font(.caption).foregroundStyle(.secondary).padding(.horizontal, 12).padding(.vertical, 6)
@@ -62,7 +65,7 @@ struct BrowserWindow: View {
         .onAppear { model.reconcile() }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if let error = model.store.persistenceError {
-                Label(error, systemImage: "externaldrive.badge.exclamationmark")
+                Label(l10n.text(error), systemImage: "externaldrive.badge.exclamationmark")
                     .font(.caption).padding(8).frame(maxWidth: .infinity)
                     .background(.red.opacity(0.12)).foregroundStyle(.red)
                     .textSelection(.enabled)
@@ -75,17 +78,17 @@ struct BrowserWindow: View {
             if !model.state.sidebarVisible {
                 Color.clear.frame(width: 64, height: 20)
                 Button { model.send(.toggleSidebar) } label: { Image(systemName: "sidebar.left") }
-                    .help("サイドバーを表示 (⌘S)")
+                    .help(l10n.text("Show Sidebar (⌘S)"))
             }
             Button { model.activeSession?.goBack() } label: { Image(systemName: "chevron.left") }
-                .disabled(!(model.activeSession?.canGoBack ?? false)).help("戻る (⌘[)")
+                .disabled(!(model.activeSession?.canGoBack ?? false)).help(l10n.text("Back (⌘[)"))
             Button { model.activeSession?.goForward() } label: { Image(systemName: "chevron.right") }
-                .disabled(!(model.activeSession?.canGoForward ?? false)).help("進む (⌘])")
+                .disabled(!(model.activeSession?.canGoForward ?? false)).help(l10n.text("Forward (⌘])"))
             Button {
                 guard let session = model.activeSession else { return }
                 session.isLoading ? session.stop() : session.reload()
             } label: { Image(systemName: model.activeSession?.isLoading == true ? "xmark" : "arrow.clockwise") }
-                .help("再読み込み (⌘R)")
+                .help(l10n.text("Reload (⌘R)"))
             Button { model.showCommand(.navigate) } label: {
                 HStack(spacing: 6) {
                     Image(systemName: model.activeSession?.url?.scheme == "https" ? "lock" : "globe")
@@ -95,20 +98,20 @@ struct BrowserWindow: View {
                     Text("⌘L").font(.caption).foregroundStyle(.tertiary)
                 }.foregroundStyle(.secondary).padding(.horizontal, 10).padding(.vertical, 7)
                     .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 7))
-            }.buttonStyle(.plain).accessibilityLabel("アドレスを入力").accessibilityIdentifier("current-url").accessibilityValue(displayAddress)
+            }.buttonStyle(.plain).accessibilityLabel(l10n.text("Enter Address")).accessibilityIdentifier("current-url").accessibilityValue(displayAddress)
             if model.state.split != nil {
-                Button { model.send(.swapSplit) } label: { Image(systemName: "arrow.left.arrow.right") }.help("分割を入れ替える").accessibilityIdentifier("split-swap")
-                Button { model.send(.clearSplit) } label: { Image(systemName: "rectangle") }.help("分割を解除").accessibilityIdentifier("split-clear")
+                Button { model.send(.swapSplit) } label: { Image(systemName: "arrow.left.arrow.right") }.help(l10n.text("Swap Split Panes")).accessibilityIdentifier("split-swap")
+                Button { model.send(.clearSplit) } label: { Image(systemName: "rectangle") }.help(l10n.text("Close Split View")).accessibilityIdentifier("split-clear")
             } else {
                 Menu {
                     ForEach(model.state.tabs.filter { $0.spaceID == model.state.selectedSpaceID && $0.id != model.state.selectedTabID }) { tab in
-                        Button(tab.displayTitle) { model.split(with: tab) }
+                        Button(tab.localizedTitle(using: l10n)) { model.split(with: tab) }
                     }
                     if model.state.tabs.filter({ $0.spaceID == model.state.selectedSpaceID }).count < 2 {
-                        Text("別のタブを開くと分割できます")
+                        Text(l10n.text("Open another tab to use split view"))
                     }
                 } label: { Image(systemName: "rectangle.split.2x1") }
-                    .menuStyle(.borderlessButton).fixedSize().help("別のタブと分割")
+                    .menuStyle(.borderlessButton).fixedSize().help(l10n.text("Split with Another Tab"))
                     .disabled(model.selectedTab == nil).accessibilityIdentifier("split-toggle")
             }
         }
@@ -124,14 +127,14 @@ struct BrowserWindow: View {
     }
 
     private var displayAddress: String {
-        guard let url = model.activeSession?.url, url.absoluteString != "about:blank" else { return "検索またはURLを入力" }
+        guard let url = model.activeSession?.url, url.absoluteString != "about:blank" else { return l10n.text("Search or enter URL") }
         return url.absoluteString.replacingOccurrences(of: "https://", with: "")
     }
 
     private var findBar: some View {
         HStack {
             Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-            TextField("ページ内を検索", text: $model.findText)
+            TextField(l10n.text("Find in Page"), text: $model.findText)
                 .accessibilityIdentifier("find-input")
                 .focused($findFocused).onAppear { findFocused = true }
                 .textFieldStyle(.plain).onSubmit { model.activeSession?.find(model.findText) }
@@ -162,7 +165,7 @@ struct BrowserWindow: View {
                                     if splitDragStart == nil { splitDragStart = split.fraction }
                                     model.store.send(.setSplitFraction((splitDragStart ?? 0.5) + value.translation.width / geometry.size.width))
                                 }.onEnded { _ in splitDragStart = nil })
-                                .accessibilityLabel("分割の幅")
+                                .accessibilityLabel(l10n.text("Split Width"))
                         }
                     }
                 }
@@ -182,13 +185,15 @@ struct BrowserWindow: View {
         VStack(spacing: 16) {
             Image(systemName: "square.stack.3d.up").font(.system(size: 46, weight: .ultraLight)).foregroundStyle(model.tint)
             Text(model.selectedSpace?.name ?? "choco").font(.largeTitle.weight(.medium))
-            Text("次のアイデアへ、ひとつのタブから。 ").foregroundStyle(.secondary)
-            Button("検索またはURLを入力  ⌘T") { model.showCommand(.newTab) }.buttonStyle(.bordered)
+            Text(l10n.text("Your next idea starts with a tab.")).foregroundStyle(.secondary)
+            Button(l10n.text("Search or enter URL  ⌘T")) { model.showCommand(.newTab) }.buttonStyle(.bordered)
         }.frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
 private struct BrowserPane: View {
+    @AppStorage(AppLanguage.storageKey, store: AppLanguage.defaults) private var language = AppLanguage.current.rawValue
+    private var l10n: Localizer { Localizer(language: AppLanguage(rawValue: language) ?? .current) }
     @Bindable var model: AppModel
     let session: WebSession
     let tabID: UUID?
@@ -197,8 +202,8 @@ private struct BrowserPane: View {
             if session.url == nil || session.url?.absoluteString == "about:blank" {
                 VStack(spacing: 14) {
                     Image(systemName: "sparkle").font(.system(size: 40, weight: .light)).foregroundStyle(model.tint)
-                    Text("新しいタブ").font(.title2.weight(.medium))
-                    Button("検索またはURLを入力  ⌘L") { model.showCommand(.navigate) }.buttonStyle(.bordered)
+                    Text(l10n.text("New Tab")).font(.title2.weight(.medium))
+                    Button(l10n.text("Search or enter URL  ⌘L")) { model.showCommand(.navigate) }.buttonStyle(.bordered)
                 }.frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 WebViewMount(webView: session.webView) { model.focusTab(tabID) }
@@ -206,9 +211,9 @@ private struct BrowserPane: View {
             if let message = session.errorMessage {
                 VStack(spacing: 12) {
                     Image(systemName: "wifi.exclamationmark").font(.largeTitle)
-                    Text("ページを開けませんでした").font(.headline)
+                    Text(l10n.text("Unable to Open Page")).font(.headline)
                     Text(message).font(.callout).foregroundStyle(.secondary).textSelection(.enabled)
-                    Button("再試行") { session.reload() }.buttonStyle(.borderedProminent)
+                    Button(l10n.text("Try Again")) { session.reload() }.buttonStyle(.borderedProminent)
                 }.padding(30).frame(maxWidth: 480)
                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
             }

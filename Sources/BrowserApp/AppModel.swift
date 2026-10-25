@@ -1,3 +1,4 @@
+import BrowserLocalization
 import AppKit
 import BrowserCore
 import BrowserRuntime
@@ -94,7 +95,7 @@ import WebKit
     }
 
     func open(_ text: String, newTab: Bool) {
-        guard let url = AddressResolver.resolve(text) else { commandError = "検索語、またはHTTP・HTTPSのURLを入力してください。"; return }
+        guard let url = AddressResolver.resolve(text) else { commandError = "Enter a search term or an HTTP or HTTPS URL."; return }
         commandError = nil
         if newTab || activeSession == nil {
             send(.newTab(url: url.absoluteString))

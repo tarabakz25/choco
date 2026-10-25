@@ -1,0 +1,3 @@
+"NSCameraUsageDescription" = "許可したWebサイトでカメラを使用します。";
+"NSMicrophoneUsageDescription" = "許可したWebサイトでマイクを使用します。";
+"NSLocationWhenInUseUsageDescription" = "許可したWebサイトで位置情報を使用します。";
