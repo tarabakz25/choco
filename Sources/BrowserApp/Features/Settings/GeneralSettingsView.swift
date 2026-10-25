@@ -34,9 +34,9 @@ struct GeneralSettingsView: View {
             .padding(.horizontal, 10)
             .background(SettingsStyle.card, in: RoundedRectangle(cornerRadius: 8))
             .overlay { RoundedRectangle(cornerRadius: 8).strokeBorder(SettingsStyle.border) }
-            .padding(.top, 24)
+            .padding(.top, ChocoSpace.xl)
             Text("無効の項目はこのバージョンでは未対応です。")
-                .font(ChocoTheme.font(11)).foregroundStyle(SettingsStyle.secondary).padding(.top, 8)
+                .font(ChocoTheme.font(11)).foregroundStyle(SettingsStyle.secondary).padding(.top, ChocoSpace.sm)
         }.padding(.horizontal, 64).padding(.top, 20)
     }
 }

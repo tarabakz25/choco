@@ -52,7 +52,7 @@ struct EditorSheet: View {
                 Button("キャンセル") { dismiss() }.keyboardShortcut(.cancelAction)
                 Button("保存") { save() }.keyboardShortcut(.defaultAction).buttonStyle(.borderedProminent).accessibilityIdentifier("editor-save")
             }
-        }.padding(24).frame(width: 470)
+        }.padding(ChocoSpace.xl).frame(width: 470)
             .onAppear { load(); focused = true }
     }
 

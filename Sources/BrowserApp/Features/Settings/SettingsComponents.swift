@@ -23,7 +23,7 @@ struct SettingsRow<Accessory: View>: View {
         self.title = title; self.icon = icon; self.iconColor = iconColor; self.info = info; self.divider = divider; self.accessory = accessory()
     }
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: ChocoSpace.sm) {
             if let icon {
                 DesignIcon("settings-\(icon)", size: 20).background(Color(hex: iconColor), in: RoundedRectangle(cornerRadius: 5))
             }
@@ -43,7 +43,7 @@ struct SettingsButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label.font(ChocoTheme.font(13, weight: .medium))
             .foregroundStyle(enabled ? SettingsStyle.text : SettingsStyle.secondary)
-            .padding(.horizontal, 12).frame(height: 24)
+            .padding(.horizontal, ChocoSpace.md).frame(height: 24)
             .background(configuration.isPressed ? SettingsStyle.selected : SettingsStyle.button, in: RoundedRectangle(cornerRadius: 6))
     }
 }
@@ -99,7 +99,7 @@ struct SettingsFixedValue: View {
     init(_ value: String) { self.value = value }
 
     var body: some View {
-        Text(value).frame(width: 136, height: 24, alignment: .leading).padding(.leading, 8)
+        Text(value).frame(width: 136, height: 24, alignment: .leading).padding(.leading, ChocoSpace.sm)
             .background(SettingsStyle.button, in: RoundedRectangle(cornerRadius: 6))
     }
 }

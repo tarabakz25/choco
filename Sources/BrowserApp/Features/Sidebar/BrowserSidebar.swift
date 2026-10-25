@@ -2,7 +2,7 @@ import BrowserCore
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// The 200-point graphite browser sidebar, translated from the supplied Figma component.
+/// The 12.5rem (200pt) graphite browser sidebar, translated from the supplied Figma component.
 /// All page labels, favorites and Spaces come from the user's actual local browser state.
 struct BrowserSidebar: View {
     @Bindable var model: AppModel
@@ -10,6 +10,8 @@ struct BrowserSidebar: View {
     @State private var pinnedCollapsed = false
     @State private var hoveredTabID: UUID?
     @State private var urlFieldPressed = false
+    @AppStorage("choco.hidesEmptyFavoritesHint") private var hidesFavoritesHint = false
+    @State private var favoritesDropTargeted = false
     @State private var tabPresentation: SidebarTabPresentation
     @ChocoReducedMotion private var reduceMotion: Bool
 
@@ -24,9 +26,10 @@ struct BrowserSidebar: View {
             addressField
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 6) {
-                    favorites
+                    if model.state.favorites.isEmpty && !hidesFavoritesHint { favoritesEmpty } else { favorites }
+                    if isSpaceEmpty { spaceNameLabel }
                     pinnedTabs
-                    clearDivider
+                    if !isSpaceEmpty { clearDivider }
                     newTabButton
                     VStack(spacing: 0) {
                         ForEach(presentedSpaceTabs.filter { !$0.tab.isPinned }) { item in presentedTabRow(item, bottomGap: 4) }
@@ -59,11 +62,13 @@ struct BrowserSidebar: View {
     private var rootFolders: [BrowserFolder] { model.state.folders.filter { $0.spaceID == model.state.selectedSpaceID && $0.parentID == nil } }
     private var presentedSpaceTabs: [SidebarPresentedTab] { tabPresentation.rows.filter { $0.tab.spaceID == model.state.selectedSpaceID } }
 
+    /// Distance from the sidebar's leading edge to the first control, clear of the native traffic lights.
+    private static let controlsInset: CGFloat = 76
+
     private var topBar: some View {
         HStack(spacing: 0) {
             // Native macOS controls are positioned by the window; never draw inactive lookalikes.
-            Color.clear.frame(width: 52, height: 12).accessibilityHidden(true)
-            Color.clear.frame(width: 10, height: 4).accessibilityHidden(true)
+            Color.clear.frame(width: Self.controlsInset - ChocoSpace.sm - 6, height: 12).accessibilityHidden(true)
             Button { model.send(.toggleSidebar) } label: { DesignIcon("de36e", size: 16).opacity(0.62).frame(width: 28, height: 28) }
                 .help("サイドバーを隠す (⌘S)").accessibilityLabel("サイドバーを隠す")
             Spacer(minLength: 0)
@@ -78,7 +83,7 @@ struct BrowserSidebar: View {
                 .help(model.activeSession?.isLoading == true ? "読み込みを中止" : "再読み込み (⌘R)")
                 .accessibilityLabel(model.activeSession?.isLoading == true ? "読み込みを中止" : "再読み込み")
         }
-        .buttonStyle(.plain)
+        .buttonStyle(ChocoPressStyle())
         .padding(.leading, 6)
         .frame(height: 28)
     }
@@ -116,11 +121,13 @@ struct BrowserSidebar: View {
             .accessibilityIdentifier("current-url")
             .accessibilityValue(currentURL ?? "検索またはURLを入力")
             Button { model.showsSiteControls.toggle() } label: {
-                DesignIcon("20d2c", size: 14).opacity(0.7).frame(width: 24, height: 28)
+                DesignIcon("20d2c", size: 12).opacity(0.9).frame(width: 20, height: 20)
+                    .frame(width: 24, height: 28)
             }
-            .buttonStyle(URLFieldPressButtonStyle()).help("サイトの操作")
+            .buttonStyle(SiteControlsButtonStyle(isActive: model.showsSiteControls)).help("サイトの操作")
             .accessibilityLabel("サイトの操作").accessibilityIdentifier("site-controls")
-            .padding(.trailing, 3)
+            .accessibilityAddTraits(model.showsSiteControls ? .isSelected : [])
+            .padding(.trailing, 4)
         }
         .frame(height: 32)
         .background(ChocoTheme.field, in: RoundedRectangle(cornerRadius: 8))
@@ -136,6 +143,52 @@ struct BrowserSidebar: View {
         .anchorPreference(key: SiteControlsAnchorKey.self, value: .bounds) { $0 }
     }
 
+    /// No tabs, folders or pinned items in the current Space: Figma 157:7042 drops the divider and selection tint.
+    private var isSpaceEmpty: Bool { spaceTabs.isEmpty && rootFolders.isEmpty }
+
+    /// Figma `Favorites Empty` (156:1528): dashed 10pt-radius box, 16pt star badge, two centered lines.
+    private var favoritesEmpty: some View {
+        VStack(spacing: ChocoSpace.xxs) {
+            DesignIcon("f625c", size: 16)
+            Text("ドラッグしてお気に入りに追加").font(ChocoTheme.font(10.5, weight: .semibold))
+            Text("よく使うサイトやアプリをすぐ開けます")
+                .font(ChocoTheme.font(10)).foregroundStyle(ChocoTheme.secondary)
+                .multilineTextAlignment(.center).lineSpacing(0).fixedSize(horizontal: false, vertical: true)
+                .frame(width: 124)
+        }
+        .padding(.top, ChocoSpace.md).padding(.bottom, ChocoSpace.sm).padding(.horizontal, ChocoSpace.md)
+        .frame(maxWidth: .infinity)
+        .background(Color.black.opacity(favoritesDropTargeted ? 0.3 : 0.18), in: RoundedRectangle(cornerRadius: 10))
+        .overlay {
+            RoundedRectangle(cornerRadius: 10)
+                .strokeBorder(Color.white.opacity(favoritesDropTargeted ? 0.6 : 0.34), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+        }
+        .overlay(alignment: .topTrailing) {
+            Button { hidesFavoritesHint = true } label: {
+                DesignIcon("77a3c", size: 11).rotationEffect(.degrees(45)).frame(width: 20, height: 20)
+            }
+            .buttonStyle(ChocoPressStyle(radius: 5)).padding(.top, 3).padding(.trailing, 3)
+            .help("ヒントを閉じる").accessibilityLabel("ヒントを閉じる")
+        }
+        .contentShape(RoundedRectangle(cornerRadius: 10))
+        .dropDestination(for: String.self) { values, _ in
+            guard let value = values.first, let id = UUID(uuidString: value),
+                  let tab = model.state.tabs.first(where: { $0.id == id }), tab.url != "about:blank" else { return false }
+            model.send(.createFavorite(title: tab.displayTitle, url: tab.url)); return true
+        } isTargeted: { favoritesDropTargeted = $0 }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("ドラッグしてお気に入りに追加")
+        .accessibilityIdentifier("favorites-empty")
+    }
+
+    /// Figma `Space Name` (156:1704): 28pt row labelling an otherwise empty Space.
+    private var spaceNameLabel: some View {
+        Text(model.selectedSpace?.name ?? "")
+            .font(ChocoTheme.font(11, weight: .semibold)).foregroundStyle(ChocoTheme.tertiary).lineLimit(1)
+            .padding(.horizontal, 10).frame(maxWidth: .infinity, alignment: .leading).frame(height: 28)
+            .accessibilityIdentifier("space-name")
+    }
+
     private var favorites: some View {
         LazyVGrid(columns: Array(repeating: GridItem(.fixed(56), spacing: 8), count: 3), alignment: .leading, spacing: 10) {
             ForEach(model.state.favorites) { favorite in
@@ -144,7 +197,7 @@ struct BrowserSidebar: View {
                         .frame(width: 56, height: 38)
                         .background(model.state.selectedFavoriteID == favorite.id ? ChocoTheme.selected : ChocoTheme.tile, in: RoundedRectangle(cornerRadius: 8))
                 }
-                .buttonStyle(.plain).help(favorite.title)
+                .buttonStyle(ChocoPressStyle(radius: 8)).help(favorite.title)
                 .accessibilityLabel(favorite.title).accessibilityIdentifier("favorite-\(favorite.id)")
                 .contextMenu {
                     Button("編集…") { model.editor = .favorite(favorite.id) }
@@ -157,23 +210,24 @@ struct BrowserSidebar: View {
                         .frame(width: 56, height: 38)
                         .background(ChocoTheme.tile, in: RoundedRectangle(cornerRadius: 8))
                 }
-                .buttonStyle(.plain).help("お気に入りを追加")
+                .buttonStyle(ChocoPressStyle(radius: 8)).help("お気に入りを追加")
                 .accessibilityLabel("お気に入りを追加").accessibilityIdentifier("add-favorite")
             }
         }
-        .padding(.bottom, 0)
+        // Figma leaves 12pt between the tiles and the folder row; the stack already adds 6.
+        .padding(.bottom, 6)
     }
 
     private var pinnedTabs: some View {
         VStack(alignment: .leading, spacing: 0) {
             if pinnedCollapsed {
                 Button { pinnedCollapsed = false } label: {
-                    HStack(spacing: 8) {
+                    HStack(spacing: ChocoSpace.sm) {
                         DesignIcon("9fb54", size: 12).opacity(0.6)
                         Text("固定タブ").font(ChocoTheme.font(13, weight: .medium)).foregroundStyle(ChocoTheme.secondary)
                         Spacer(minLength: 0)
                     }.padding(.horizontal, 10).frame(height: 32).contentShape(Rectangle())
-                }.buttonStyle(.plain)
+                }.buttonStyle(ChocoPressStyle(radius: 8))
             } else {
                 ForEach(rootFolders) { folder in folderRow(folder, depth: 0) }
                 ForEach(presentedSpaceTabs.filter { $0.tab.isPinned && $0.tab.folderID == nil }) { item in presentedTabRow(item) }
@@ -189,25 +243,25 @@ struct BrowserSidebar: View {
         HStack(spacing: 6) {
             Rectangle().fill(ChocoTheme.divider).frame(height: 1)
             Button { model.send(.clearToday) } label: {
-                HStack(spacing: 2) {
+                HStack(spacing: ChocoSpace.xxs) {
                     DesignIcon("d8aa1", size: 9)
                     Text("クリア").font(ChocoTheme.font(11, weight: .medium))
                 }.foregroundStyle(ChocoTheme.secondary).opacity(0.75)
             }
-            .buttonStyle(.plain).disabled(!spaceTabs.contains { !$0.isPinned })
+            .buttonStyle(ChocoPressStyle(radius: 4)).disabled(!spaceTabs.contains { !$0.isPinned })
             .help("Todayのタブをアーカイブへ移動").accessibilityIdentifier("clear-today")
-        }.padding(.horizontal, 4).frame(height: 16)
+        }.padding(.horizontal, ChocoSpace.xs).frame(height: 16)
     }
 
     private var newTabButton: some View {
         Button { model.showCommand(.newTab) } label: {
             HStack(spacing: 6) {
                 DesignIcon("77a3c", size: 11).opacity(0.75).frame(width: 16, height: 16)
-                Text("新しいタブ").font(ChocoTheme.font(13, weight: .medium))
+                Text("新しいタブ").font(ChocoTheme.font(13, weight: .medium)).opacity(isSpaceEmpty ? 0.72 : 1)
                 Spacer(minLength: 0)
             }.padding(.horizontal, 10).frame(height: 32).contentShape(Rectangle())
-                .background(ChocoTheme.selected, in: RoundedRectangle(cornerRadius: 8))
-        }.buttonStyle(.plain).help("新しいタブ (⌘T)").accessibilityIdentifier("new-tab")
+                .background(isSpaceEmpty ? Color.clear : ChocoTheme.selected, in: RoundedRectangle(cornerRadius: 8))
+        }.buttonStyle(ChocoPressStyle(radius: 8)).help("新しいタブ (⌘T)").accessibilityIdentifier("new-tab")
     }
 
     private func folderRow(_ folder: BrowserFolder, depth: Int) -> AnyView {
@@ -216,13 +270,13 @@ struct BrowserSidebar: View {
             Button {
                 if !collapsedFolders.insert(folder.id).inserted { collapsedFolders.remove(folder.id) }
             } label: {
-                HStack(spacing: 8) {
+                HStack(spacing: ChocoSpace.sm) {
                     DesignIcon("9fb54", size: 12).opacity(0.6)
                         .rotationEffect(.degrees(collapsedFolders.contains(folder.id) ? 0 : 90))
                     Text(folder.name).font(ChocoTheme.font(13, weight: .medium)).foregroundStyle(ChocoTheme.secondary).lineLimit(1)
                     Spacer(minLength: 0)
                 }.padding(.horizontal, 10).frame(height: 32).contentShape(Rectangle())
-            }.buttonStyle(.plain).accessibilityIdentifier("folder-\(folder.id)")
+            }.buttonStyle(ChocoPressStyle(radius: 8)).accessibilityIdentifier("folder-\(folder.id)")
                 .contextMenu {
                     Button("名前を変更…") { model.editor = .renameFolder(folder.id) }
                     Button("サブフォルダを作成…") { model.editor = .folder(folder.id) }
@@ -245,7 +299,7 @@ struct BrowserSidebar: View {
                 VStack(spacing: 0) {
                     ForEach(children) { child in folderRow(child, depth: depth + 1) }
                     ForEach(presentedSpaceTabs.filter { $0.tab.folderID == folder.id }) { item in presentedTabRow(item) }
-                }.padding(.leading, 12)
+                }.padding(.leading, ChocoSpace.md)
             }
         })
     }
@@ -311,7 +365,7 @@ struct BrowserSidebar: View {
                 .background(isSelected(tab) ? ChocoTheme.selected : hoveredTabID == tab.id ? ChocoTheme.tile : Color.clear, in: RoundedRectangle(cornerRadius: 8))
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(ChocoPressStyle(radius: 8))
             .accessibilityIdentifier("select-tab-\(tab.id)")
         }
         .onHover { hoveredTabID = $0 ? tab.id : nil }
@@ -367,12 +421,12 @@ struct BrowserSidebar: View {
     }
 
     private var bottomBar: some View {
-        HStack(spacing: 2) {
+        HStack(spacing: ChocoSpace.xxs) {
             Button { model.showsArchive = true } label: {
                 DesignIcon("e1841", size: 16).opacity(0.7).frame(width: 26, height: 26)
-            }.buttonStyle(.plain).help("ライブラリ · アーカイブ").accessibilityLabel("ライブラリ").accessibilityIdentifier("open-archive")
+            }.buttonStyle(ChocoPressStyle()).help("ライブラリ · アーカイブ").accessibilityLabel("ライブラリ").accessibilityIdentifier("open-archive")
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 2) {
+                HStack(spacing: ChocoSpace.xxs) {
                     ForEach(model.state.spaces) { space in
                         Button { model.send(.selectSpace(space.id)) } label: {
                             SpaceIcon(space.icon, size: 16).frame(width: 24, height: 26)
@@ -383,7 +437,7 @@ struct BrowserSidebar: View {
                                     }
                                 }
                         }
-                        .buttonStyle(.plain).help(space.name).accessibilityLabel("Space: \(space.name)")
+                        .buttonStyle(ChocoPressStyle()).help(space.name).accessibilityLabel("Space: \(space.name)")
                         .accessibilityIdentifier("space-\(space.id)")
                         .dropDestination(for: String.self) { values, _ in
                             guard let value = values.first, let id = UUID(uuidString: value) else { return false }
@@ -408,8 +462,25 @@ struct BrowserSidebar: View {
                 .help("Spaceとプロファイル").accessibilityLabel("Spaceとプロファイル").accessibilityIdentifier("space-menu")
             Button { model.editor = .space(nil) } label: {
                 DesignIcon("77a3c", size: 16).opacity(0.7).frame(width: 26, height: 26)
-            }.buttonStyle(.plain).help("Spaceを作成").accessibilityLabel("Spaceを作成").accessibilityIdentifier("add-space")
+            }.buttonStyle(ChocoPressStyle()).help("Spaceを作成").accessibilityLabel("Spaceを作成").accessibilityIdentifier("add-space")
         }.frame(height: 26)
+    }
+}
+
+/// The URL field's trailing 20pt tile (Figma `site controls`): lit while pressed and while its popover is open.
+private struct SiteControlsButtonStyle: ButtonStyle {
+    var isActive: Bool
+    @ChocoReducedMotion private var reduceMotion: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        let lit = configuration.isPressed || isActive
+        configuration.label
+            .background {
+                RoundedRectangle(cornerRadius: 5).fill(ChocoTheme.selected).frame(width: 20, height: 20)
+                    .opacity(lit ? 1 : 0)
+            }
+            .contentShape(Rectangle())
+            .animation(reduceMotion ? nil : .timingCurve(0.2, 0.8, 0.2, 1, duration: lit ? 0.07 : 0.23), value: lit)
     }
 }
 

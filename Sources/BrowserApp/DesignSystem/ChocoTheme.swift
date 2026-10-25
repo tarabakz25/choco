@@ -16,9 +16,18 @@ enum ChocoTheme {
     static let tile = Color.white.opacity(0.06)
     static let divider = Color.white.opacity(0.15)
     static let content = Color(hex: "F4F4F5")
-    static let sidebarWidth: CGFloat = 200
+    /// Page area while no tab is open: slate at the top left shading to mauve at the bottom right.
+    static let emptyContent = LinearGradient(
+        colors: [Color(hex: "3A394C"), Color(hex: "413A4C"), Color(hex: "49394C")],
+        startPoint: .topLeading, endPoint: .bottomTrailing)
+    /// 12.5rem, as measured in Figma (frame 19:1026): 3 favorite tiles (56pt) + 2 gaps (sm) + sm insets on both sides.
+    static let sidebarWidth: CGFloat = ChocoSpace.rem(12.5)
+    static let sidebarMaxWidth: CGFloat = ChocoSpace.rem(20)
+    static let archiveWidth: CGFloat = 362
+    /// 13.75rem, as measured in Figma (frame 20:1751): 204pt of content inside sm insets.
+    static let siteControlsWidth: CGFloat = ChocoSpace.rem(13.75)
     static let rowHeight: CGFloat = 32
-    static let contentInset: CGFloat = 8
+    static let contentInset: CGFloat = ChocoSpace.sm
     static let contentRadius: CGFloat = 6
 
     static func font(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {

@@ -37,7 +37,7 @@ struct SiteControlsView: View {
         VStack(alignment: .leading, spacing: 6) {
             quickActions
             sectionHeader("このページ")
-            HStack(spacing: 8) {
+            HStack(spacing: ChocoSpace.sm) {
                 ZStack {
                     Circle().fill(.white.opacity(0.2)).frame(width: 28, height: 28)
                     SiteIcon(url: pageURL?.absoluteString ?? "", size: 16)
@@ -49,7 +49,7 @@ struct SiteControlsView: View {
                         .font(ChocoTheme.font(11)).foregroundStyle(ChocoTheme.secondary).lineLimit(1)
                 }
                 Spacer(minLength: 0)
-            }.padding(.leading, 2).padding(.trailing, 6).frame(height: 40)
+            }.frame(height: 40)
             sectionHeader("ページ操作")
             Button { togglePinned() } label: {
                 settingsRow(title: currentTab?.isPinned == true ? "固定を解除" : "タブを固定",
@@ -103,7 +103,7 @@ struct SiteControlsView: View {
     }
 
     private var quickActions: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: ChocoSpace.sm) {
             if let pageURL {
                 ShareLink(item: pageURL) {
                     quickTile { DesignIcon("d2996", size: 15) }
@@ -139,7 +139,7 @@ struct SiteControlsView: View {
             }.buttonStyle(.plain).disabled(!canToggleFavorite)
                 .accessibilityLabel(matchingFavorite == nil ? "お気に入りに追加" : "お気に入りを解除")
                 .accessibilityIdentifier("site-quick-favorite").help("お気に入り")
-        }.frame(maxWidth: .infinity, alignment: .leading)
+        }.frame(maxWidth: .infinity)
     }
 
     @ViewBuilder private var splitAction: some View {
@@ -201,30 +201,31 @@ struct SiteControlsView: View {
             } label: {
                 DesignIcon("a3077", size: 14).frame(width: 26, height: 26)
                     .background(.white.opacity(0.1), in: Circle())
-            }.menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+            }.menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
                 .accessibilityLabel("その他のページ操作").accessibilityIdentifier("site-more")
         }.frame(height: 28)
     }
 
     private func sectionHeader(_ title: String) -> some View {
         Text(title).font(ChocoTheme.font(13, weight: .bold))
-            .padding(.leading, 2).frame(height: 22, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .leading).frame(height: 22)
     }
 
+    /// Figma: four tiles share the 204pt content width equally (flex 1, 8pt gaps), so the row spans edge to edge.
     private func quickTile<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        content().frame(width: 40, height: 26)
+        content().frame(maxWidth: .infinity).frame(height: 26)
             .background(Color(hex: "232323"), in: RoundedRectangle(cornerRadius: 7))
             .contentShape(RoundedRectangle(cornerRadius: 7))
     }
 
     private func settingsRow<Icon: View>(title: String, subtitle: String, @ViewBuilder icon: () -> Icon) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: ChocoSpace.sm) {
             icon().frame(width: 28, height: 28).background(.white.opacity(0.2), in: Circle())
             VStack(alignment: .leading, spacing: 0) {
                 Text(title).font(ChocoTheme.font(13, weight: .semibold)).lineLimit(1)
                 Text(subtitle).font(ChocoTheme.font(11)).foregroundStyle(ChocoTheme.secondary).lineLimit(1)
             }.frame(maxWidth: .infinity, alignment: .leading)
-        }.padding(.leading, 2).padding(.trailing, 6).frame(height: 40)
+        }.frame(maxWidth: .infinity, alignment: .leading).frame(height: 40)
             .contentShape(RoundedRectangle(cornerRadius: 8))
     }
 

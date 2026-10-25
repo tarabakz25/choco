@@ -135,12 +135,12 @@ struct CommandPalette: View {
             .buttonStyle(.plain)
             .accessibilityLabel("コマンドバーの使い方")
             .popover(isPresented: $showsInputHelp, arrowEdge: .top) {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: ChocoSpace.sm) {
                     Text("URL・検索・タブ・コマンド").font(ChocoTheme.font(13, weight: .semibold))
                     Text("↑↓で選択、Returnで実行、Escapeで閉じます。")
                     Text("⌘Lは現在のページを開き、⌘Tは新しいタブを作成します。")
                     Text("別のSpaceのタブへの切り替えは、候補から選択してください。")
-                }.font(ChocoTheme.font(11)).padding(16).frame(width: 300, alignment: .leading)
+                }.font(ChocoTheme.font(11)).padding(ChocoSpace.lg).frame(width: 300, alignment: .leading)
             }
         }
         .padding(.leading, 18).padding(.trailing, 14).frame(height: 52)
@@ -179,7 +179,7 @@ struct CommandPalette: View {
             icon().frame(width: 16, height: 16)
             Text(title).font(ChocoTheme.font(13, weight: .semibold)).lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            HStack(spacing: 8) {
+            HStack(spacing: ChocoSpace.sm) {
                 Text(action).font(ChocoTheme.font(12, weight: .semibold))
                     .foregroundStyle(selected ? Color(hex: "F2F2F2") : Color(hex: "6E6E6E"))
                     .lineLimit(1).frame(maxWidth: 180, alignment: .trailing)

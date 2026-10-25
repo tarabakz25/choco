@@ -26,7 +26,7 @@ struct SettingsToolbar: View {
     let titlebarHeight: CGFloat
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: ChocoSpace.xs) {
             ForEach(SettingsPage.allCases) { item in
                 Button { page = item } label: {
                     VStack(spacing: 3) {

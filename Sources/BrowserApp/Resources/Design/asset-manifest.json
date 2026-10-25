@@ -861,6 +861,17 @@
         "viewBox": "0 0 13.44 13.44"
       },
       "bytes": 1002
+    },
+    "f625c.svg": {
+      "aliases": [
+        "sidebar-empty-reference:imgStarBadge"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 438
     }
   }
 }

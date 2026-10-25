@@ -61,7 +61,7 @@ struct BrowserWindow: View {
 
                 if model.showsArchive {
                     ArchiveLibraryView(model: model)
-                        .frame(width: 362, height: geometry.size.height)
+                        .frame(width: ChocoTheme.archiveWidth, height: geometry.size.height)
                         .transition(.opacity)
                         .allowsHitTesting(!modalPresented)
                         .accessibilityHidden(modalPresented)
@@ -80,7 +80,7 @@ struct BrowserWindow: View {
                         .contentShape(Rectangle()).onTapGesture { model.showsSiteControls = false }
                     let rect = geometry[anchor]
                     SiteControlsView(model: model)
-                        .frame(width: 220)
+                        .frame(width: ChocoTheme.siteControlsWidth)
                         .fixedSize(horizontal: false, vertical: true)
                         .offset(x: min(max(8, rect.maxX - 120), geometry.size.width - 228), y: rect.maxY + 4)
                         // SiteControlsView owns its Figma entry spring/fade. Only
@@ -129,13 +129,13 @@ struct BrowserWindow: View {
         }
         .onAppear {
             model.reconcile(); updateWindowControls(); synchronizePages()
-            MotionDiagnostics.record("policy", value: model.state.sidebarVisible ? 200 : 0, reducedMotion: reduceMotion)
+            MotionDiagnostics.record("policy", value: model.state.sidebarVisible ? Double(ChocoTheme.sidebarWidth) : 0, reducedMotion: reduceMotion)
         }
         .onChange(of: model.state.tabs.map(\.id)) { _, ids in
             MotionDiagnostics.record("tabs", value: Double(ids.count), reducedMotion: reduceMotion)
         }
         .onChange(of: reservationPose) { _, _ in
-            MotionDiagnostics.record("target", value: model.showsArchive ? 362 : model.state.sidebarVisible ? Double(sidebarWidth) : 0, reducedMotion: reduceMotion)
+            MotionDiagnostics.record("target", value: model.showsArchive ? Double(ChocoTheme.archiveWidth) : model.state.sidebarVisible ? Double(sidebarWidth) : 0, reducedMotion: reduceMotion)
         }
         .onDisappear {
             peekDismissTask?.cancel()
@@ -148,7 +148,7 @@ struct BrowserWindow: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if let error = model.store.persistenceError {
                 Label(error, systemImage: "externaldrive.badge.exclamationmark")
-                    .font(.caption).padding(8).frame(maxWidth: .infinity)
+                    .font(.caption).padding(ChocoSpace.sm).frame(maxWidth: .infinity)
                     .background(.red.opacity(0.12)).foregroundStyle(.red)
                     .textSelection(.enabled)
             }
@@ -160,7 +160,7 @@ struct BrowserWindow: View {
             // Always the first child: a presentation-clamped animatable spacer
             // reserves layout width without ever mounting a second sidebar.
             Color.clear
-                .modifier(SidebarReservation(width: model.showsArchive ? 362 : model.state.sidebarVisible ? sidebarWidth : 0))
+                .modifier(SidebarReservation(width: model.showsArchive ? ChocoTheme.archiveWidth : model.state.sidebarVisible ? sidebarWidth : 0))
                 .animation(sidebarAnimation, value: reservationPose)
                 .accessibilityHidden(true)
             VStack(spacing: 0) {
@@ -171,7 +171,7 @@ struct BrowserWindow: View {
                         Text("ダウンロード中 · \(session.activeDownloadCount)件")
                         if let progress = session.downloadProgress { ProgressView(value: progress).frame(width: 100) }
                         Spacer()
-                    }.font(ChocoTheme.font(11)).foregroundStyle(.secondary).padding(8)
+                    }.font(ChocoTheme.font(11)).foregroundStyle(.secondary).padding(ChocoSpace.sm)
                 }
                 content
             }
@@ -182,8 +182,8 @@ struct BrowserWindow: View {
                     .animation(commandAnimation, value: commandPresented)
             }
             .clipShape(RoundedRectangle(cornerRadius: ChocoTheme.contentRadius))
-            .padding(.top, 8).padding(.trailing, 8).padding(.bottom, 8)
-            .padding(.leading, model.showsArchive ? 1 : model.state.sidebarVisible ? -1 : 8)
+            .padding(.top, ChocoTheme.contentInset).padding(.trailing, ChocoTheme.contentInset).padding(.bottom, ChocoTheme.contentInset)
+            .padding(.leading, model.showsArchive ? 1 : model.state.sidebarVisible ? -1 : ChocoTheme.contentInset)
             .animation(sidebarAnimation, value: reservationPose)
         }
         .background(ChocoTheme.sidebar)
@@ -205,7 +205,7 @@ struct BrowserWindow: View {
                         if sidebarDragStart == nil { sidebarDragStart = sidebarWidth }
                         var transaction = Transaction(); transaction.animation = nil
                         withTransaction(transaction) {
-                            sidebarWidth = min(320, max(200, (sidebarDragStart ?? 200) + value.translation.width))
+                            sidebarWidth = min(ChocoTheme.sidebarMaxWidth, max(ChocoTheme.sidebarWidth, (sidebarDragStart ?? ChocoTheme.sidebarWidth) + value.translation.width))
                         }
                     }.onEnded { _ in sidebarDragStart = nil })
                     .accessibilityLabel("サイドバーの幅")
@@ -234,7 +234,7 @@ struct BrowserWindow: View {
         }
         .buttonStyle(.plain).help("サイドバーを表示 (⌘S)")
         .accessibilityLabel("サイドバーを表示").accessibilityIdentifier("show-sidebar")
-        .padding(.leading, 16).padding(.top, 14)
+        .padding(.leading, ChocoSpace.lg).padding(.top, 14)
     }
 
     private var commandLayer: some View {
@@ -245,7 +245,7 @@ struct BrowserWindow: View {
                         .contentShape(Rectangle()).onTapGesture { model.commandMode = nil }
                         .transition(.opacity)
                     CommandPalette(model: model)
-                        .frame(width: min(668, geometry.size.width - 48))
+                        .frame(width: min(668, geometry.size.width - 2 * ChocoSpace.xl))
                         .fixedSize(horizontal: false, vertical: true)
                         .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
                         .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.98)))
@@ -453,13 +453,9 @@ struct BrowserWindow: View {
         withAnimation(tabAnimation) { welcomePhase = snapshots.isEmpty ? 1 : 0 }
     }
 
+    /// With no tab open the page area is just the dim gradient; there is no message or button.
     private var welcome: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "square.stack.3d.up").font(.system(size: 46, weight: .ultraLight)).foregroundStyle(ChocoTheme.secondary)
-            Text(model.selectedSpace?.name ?? "choco").font(.largeTitle.weight(.medium))
-            Text("次のアイデアへ、ひとつのタブから。 ").foregroundStyle(.secondary)
-            Button("検索またはURLを入力  ⌘T") { model.showCommand(.newTab) }.buttonStyle(.bordered)
-        }.frame(maxWidth: .infinity, maxHeight: .infinity)
+        ChocoTheme.emptyContent.frame(maxWidth: .infinity, maxHeight: .infinity).accessibilityHidden(true)
     }
 }
 
@@ -479,7 +475,7 @@ private struct BrowserPane: View {
                 WebViewMount(webView: session.webView) { model.focusTab(tabID) }
             }
             if let message = session.errorMessage {
-                VStack(spacing: 12) {
+                VStack(spacing: ChocoSpace.md) {
                     Image(systemName: "wifi.exclamationmark").font(.largeTitle)
                     Text("ページを開けませんでした").font(.headline)
                     Text(message).font(.callout).foregroundStyle(.secondary).textSelection(.enabled)

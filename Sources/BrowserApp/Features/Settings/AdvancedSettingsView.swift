@@ -26,11 +26,11 @@ struct AdvancedSettingsView: View {
                 SettingsUnavailableButton("Reset Translated-site Prompts")
                 Spacer(minLength: 0)
                 SettingsUnavailableButton("Export Data")
-            }.padding(.top, 24)
+            }.padding(.top, ChocoSpace.xl)
             Text("無効の項目はこのバージョンでは変更できません。")
                 .font(ChocoTheme.font(11)).foregroundStyle(SettingsStyle.secondary).padding(.top, 18)
             Text("choco · macOS 15.4+ · SwiftUI + WebKit · MIT")
-                .font(ChocoTheme.font(11)).foregroundStyle(SettingsStyle.secondary).padding(.top, 8)
+                .font(ChocoTheme.font(11)).foregroundStyle(SettingsStyle.secondary).padding(.top, ChocoSpace.sm)
         }.padding(.horizontal, 64).padding(.top, 20)
     }
 }

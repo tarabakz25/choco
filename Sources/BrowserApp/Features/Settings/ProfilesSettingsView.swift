@@ -8,12 +8,12 @@ struct ProfilesSettingsView: View {
     let onShowPrivacyInfo: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: 19) {
             Text("Profiles keep logins and cookies separate across Spaces.\nYou can use a Profile across one or more Spaces.")
-                .fixedSize(horizontal: false, vertical: true)
+                .lineSpacing(1).fixedSize(horizontal: false, vertical: true)
             HStack(alignment: .top, spacing: 10) {
                 profileList
-                VStack(alignment: .leading, spacing: 26) {
+                VStack(alignment: .leading, spacing: 27) {
                     SettingsGroup {
                         SettingsRow("Search engine") { SettingsFixedValue("DuckDuckGo") }
                         SettingsRow("Manage search") { SettingsUnavailableButton("Search Settings…") }
@@ -30,7 +30,7 @@ struct ProfilesSettingsView: View {
                             }.frame(width: 144, height: 24).background(SettingsStyle.button, in: RoundedRectangle(cornerRadius: 6))
                         }.disabled(true).help("ダウンロード管理は未対応です。")
                     }
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: ChocoSpace.xs) {
                         Text("Your Data and Settings").font(ChocoTheme.font(11, weight: .medium))
                             .foregroundStyle(SettingsStyle.secondary).padding(.leading, 10)
                         SettingsGroup {
@@ -40,7 +40,7 @@ struct ProfilesSettingsView: View {
                             dataRow("Notifications", icon: "796fe", color: "FF9F0A")
                             dataRow("Clear Browsing Data", icon: "2e000", color: "FF453A", divider: false)
                         }
-                    }.padding(.top, 8)
+                    }.padding(.top, 11)
                 }.frame(width: 341)
             }
         }.padding(.horizontal, 64).padding(.top, 20)
@@ -50,13 +50,13 @@ struct ProfilesSettingsView: View {
         VStack(spacing: 0) {
             Text("Your Profiles").font(ChocoTheme.font(11, weight: .semibold))
                 .foregroundStyle(SettingsStyle.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 16).frame(height: 28)
+                .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, ChocoSpace.lg).frame(height: 28)
             Rectangle().fill(SettingsStyle.divider).frame(height: 1)
             ScrollView {
-                VStack(spacing: 4) {
+                VStack(spacing: ChocoSpace.xs) {
                     ForEach(model.state.profiles) { profile in
                         Button { selectedProfileID = profile.id } label: {
-                            HStack(spacing: 4) {
+                            HStack(spacing: ChocoSpace.xs) {
                                 Text(profile.name).lineLimit(1)
                                 Spacer(minLength: 0)
                                 let count = model.state.spaces.filter { $0.profileID == profile.id }.count
@@ -68,7 +68,7 @@ struct ProfilesSettingsView: View {
                         }.buttonStyle(.plain).accessibilityIdentifier("settings-profile-\(profile.id)")
                             .accessibilityAddTraits(selectedProfileID == profile.id ? .isSelected : [])
                     }
-                }.padding(.horizontal, 16).padding(.top, 13)
+                }.padding(.horizontal, 16).padding(.top, 14)
             }
             HStack(spacing: 0) {
                 Button { onAddProfile() } label: { DesignIcon("settings-c8b4e", size: 16).frame(width: 32, height: 28) }

@@ -42,7 +42,7 @@ struct ArchiveLibraryView: View {
             libraryRail.frame(width: 96)
             archivePanel.frame(width: 266)
         }
-        .frame(width: 362)
+        .frame(width: ChocoTheme.archiveWidth)
         .frame(maxHeight: .infinity)
         .background(ChocoTheme.sidebar)
         .foregroundStyle(ChocoTheme.text)
@@ -108,7 +108,7 @@ struct ArchiveLibraryView: View {
                     .accessibilityLabel("Spaceを選択")
                     .accessibilityIdentifier("library-space-picker")
                 }
-                .padding(.horizontal, 12)
+                .padding(.horizontal, ChocoSpace.md)
                 .padding(.bottom, 10)
             }
         }
@@ -136,14 +136,14 @@ struct ArchiveLibraryView: View {
     }
 
     private var archivePanel: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: ChocoSpace.xs) {
             searchHeader
             if visibleEntries.isEmpty {
                 emptyState
             } else {
                 ScrollViewReader { reader in
                     ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 4) {
+                        LazyVStack(alignment: .leading, spacing: ChocoSpace.xs) {
                             ForEach(dayGroups) { group in
                                 Text(dayLabel(group.day))
                                     .font(ChocoTheme.font(11, weight: .semibold))
@@ -206,7 +206,7 @@ struct ArchiveLibraryView: View {
                     ForEach(ArchiveScope.allCases) { item in Text(item.label).tag(item) }
                 }
             } label: {
-                HStack(spacing: 4) {
+                HStack(spacing: ChocoSpace.xs) {
                     DesignIcon("03c3d", size: 14).opacity(0.7)
                     Text("絞込").font(ChocoTheme.font(13, weight: .medium))
                         .foregroundStyle(ChocoTheme.secondary)
@@ -240,7 +240,7 @@ struct ArchiveLibraryView: View {
                     .foregroundStyle(ChocoTheme.text)
             }
         }
-        .padding(.horizontal, 12).padding(.top, 36)
+        .padding(.horizontal, ChocoSpace.md).padding(.top, 36)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
@@ -323,7 +323,7 @@ private struct ArchiveLibraryRow: View {
             Button(action: restore) {
                 Text("復元").font(ChocoTheme.font(10, weight: .medium))
                     .foregroundStyle(ChocoTheme.text)
-                    .padding(.horizontal, 4).frame(height: 24)
+                    .padding(.horizontal, ChocoSpace.xs).frame(height: 24)
                     .background(hovering || selected ? ChocoTheme.selected : Color.clear, in: RoundedRectangle(cornerRadius: 5))
             }
             .buttonStyle(.plain)
