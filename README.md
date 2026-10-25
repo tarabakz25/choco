@@ -46,6 +46,12 @@ open build/choco.app
 
 Space・Profileの作成は左下のメニューから、タブとフォルダの整理は右クリックメニューから行えます。フォルダは親変更と兄弟順の変更に対応します。
 
+## Figma UI
+
+[指定デザイン](https://www.figma.com/design/ZF9ydApZS6Ln3SRZFO2dWk?node-id=14-1052)に合わせ、サイドバー・コマンドバー・サイト操作・Archiveを改修しています。Archiveは左下のLibraryから、SplitはURL欄右端のサイト操作から開きます。[対応範囲と構成](docs/figma-ui.md)に詳細があります。
+
+設定の「アニメーション」から、choco内の動きをシステムに従わせるか、有効にするか、減らすか選択できます。
+
 ## データとプライバシー
 
 タブ構成はApplication Support内の`OssArc/state.json`へ保存します。アプリをサンドボックス付きで起動した場合はアプリ専用コンテナ内になります。WebサイトのCookieなどはProfileごとにWebKitの永続データストアへ保存します。別Profileへの移動ではログイン状態をコピーしません。お気に入りのリンク定義は全Space共通、実際の閲覧状態はProfileごとです。
