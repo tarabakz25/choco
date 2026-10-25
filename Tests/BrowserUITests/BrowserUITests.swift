@@ -22,6 +22,11 @@ import XCTest
         input.typeKey(.return, modifierFlags: [])
     }
 
+    private func openSiteControls() {
+        app.buttons["site-controls"].click()
+        XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "site-controls-panel").firstMatch.waitForExistence(timeout: 5))
+    }
+
     private var tabButtons: XCUIElementQuery {
         app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "select-tab-"))
     }
@@ -64,6 +69,7 @@ import XCTest
         XCTAssertTrue(app.webViews.staticTexts["Acceptance Home"].waitForExistence(timeout: 15))
         navigate(fixture + "/second", newTab: true)
         XCTAssertTrue(app.webViews.staticTexts["Acceptance Second"].waitForExistence(timeout: 15))
+        openSiteControls()
         app.descendants(matching: .any).matching(identifier: "split-toggle").firstMatch.click()
         app.menuItems["Acceptance Home"].click()
         XCTAssertTrue(app.webViews.staticTexts["Acceptance Home"].waitForExistence(timeout: 10))
@@ -135,4 +141,69 @@ import XCTest
         capture("native-popup")
         app.terminate()
     }
+    func testFigmaCommandSiteControlsAndSidebarReveal() throws {
+        launch()
+        XCTAssertTrue(app.webViews.staticTexts["Acceptance Home"].waitForExistence(timeout: 15))
+        XCTAssertEqual(app.buttons["new-tab"].frame.width, 184, accuracy: 2)
+        XCTAssertEqual(app.buttons["add-favorite"].frame.width, 56, accuracy: 1)
+        XCTAssertEqual(app.buttons["add-favorite"].frame.height, 38, accuracy: 1)
+        capture("figma-main")
+        app.typeKey("t", modifierFlags: .command)
+        let palette = app.descendants(matching: .any).matching(identifier: "command-palette").firstMatch
+        XCTAssertTrue(app.textFields["command-input"].waitForExistence(timeout: 5))
+        XCTAssertEqual(palette.frame.width, 668, accuracy: 2)
+        XCTAssertEqual(palette.frame.height, 283, accuracy: 2)
+        XCTAssertEqual(palette.frame.midX, app.windows.firstMatch.frame.midX, accuracy: 2)
+        capture("figma-command")
+        app.typeKey(.escape, modifierFlags: [])
+        openSiteControls()
+        capture("figma-site-controls")
+        app.buttons["site-find"].click()
+        let find = app.textFields["find-input"]
+        XCTAssertTrue(find.waitForExistence(timeout: 5))
+        find.typeText("Acceptance")
+        app.typeKey("f", modifierFlags: .command)
+        app.typeKey("s", modifierFlags: .command)
+        XCTAssertTrue(app.buttons["show-sidebar"].waitForExistence(timeout: 5))
+        capture("figma-sidebar-hidden")
+        app.windows.firstMatch.coordinate(withNormalizedOffset: CGVector(dx: 0.002, dy: 0.45)).hover()
+        let peek = app.descendants(matching: .any).matching(identifier: "sidebar-peek").firstMatch
+        XCTAssertTrue(peek.waitForExistence(timeout: 5))
+        capture("figma-sidebar-peek")
+        openSiteControls()
+        app.windows.firstMatch.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.75)).click()
+        let disappears = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: peek)
+        wait(for: [disappears], timeout: 5)
+        app.buttons["show-sidebar"].click()
+        XCTAssertTrue(app.buttons["current-url"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.webViews.staticTexts["Acceptance Home"].exists)
+        app.terminate()
+    }
+
+    func testFigmaInlineArchiveSearchAndRestore() throws {
+        launch()
+        XCTAssertTrue(app.webViews.staticTexts["Acceptance Home"].waitForExistence(timeout: 15))
+        navigate(fixture + "/second", newTab: true)
+        XCTAssertTrue(app.webViews.staticTexts["Acceptance Second"].waitForExistence(timeout: 15))
+        app.typeKey("w", modifierFlags: .command)
+        app.buttons["open-archive"].click()
+        let search = app.textFields["library-search"]
+        XCTAssertTrue(search.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.webViews.staticTexts["Acceptance Home"].exists, "Library must keep the live page mounted")
+        capture("figma-archive")
+        app.typeKey("w", modifierFlags: .command)
+        XCTAssertTrue(app.buttons["current-url"].waitForExistence(timeout: 5))
+        XCTAssertEqual(tabButtons.count, 1, "CmdW on Library must dismiss it, not archive the page behind it")
+        app.buttons["open-archive"].click()
+        XCTAssertTrue(search.waitForExistence(timeout: 5))
+        search.click(); search.typeText("Acceptance Second")
+        let restore = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "restore-archive-")).firstMatch
+        XCTAssertTrue(restore.waitForExistence(timeout: 5))
+        restore.click()
+        XCTAssertTrue(app.webViews.staticTexts["Acceptance Second"].waitForExistence(timeout: 15))
+        XCTAssertTrue(app.buttons["current-url"].exists)
+        XCTAssertEqual(tabButtons.count, 2)
+        app.terminate()
+    }
+
 }
