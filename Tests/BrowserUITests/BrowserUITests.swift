@@ -7,7 +7,7 @@ import XCTest
     private func launch(session: String = UUID().uuidString) {
         continueAfterFailure = false
         app = XCUIApplication()
-        app.launchArguments = ["--test-session", session, "--initial-url", fixture + "/"]
+        app.launchArguments = ["--app-language", "ja", "--test-session", session, "--initial-url", fixture + "/"]
         app.launch()
         XCTAssertTrue(app.buttons["current-url"].waitForExistence(timeout: 15))
     }
