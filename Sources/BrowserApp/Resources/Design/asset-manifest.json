@@ -1,0 +1,866 @@
+{
+  "sourceFile": "ZF9ydApZS6Ln3SRZFO2dWk",
+  "sourcePage": "14:1052",
+  "assets": {
+    "d354a.svg": {
+      "aliases": [
+        "archive-reference:imgFaviconGeneric",
+        "command-reference:imgFaviconGeneric",
+        "site-reference:imgFaviconGeneric",
+        "sidebar-reference:imgFaviconGeneric",
+        "main-reference:imgFaviconGeneric"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 888
+    },
+    "6ffaf.svg": {
+      "aliases": [
+        "archive-reference:imgFaviconColab",
+        "site-reference:imgFavicon7",
+        "sidebar-reference:imgFavicon8",
+        "main-reference:imgFavicon8"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 527
+    },
+    "03c3d.svg": {
+      "aliases": [
+        "archive-reference:imgIconFilter"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 770
+    },
+    "9d9ff.svg": {
+      "aliases": [
+        "archive-reference:imgIconSearch",
+        "command-reference:imgIconSearch",
+        "sidebar-reference:imgIconSearch",
+        "main-reference:imgIconSearch"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 603
+    },
+    "5de62.svg": {
+      "aliases": [
+        "archive-reference:imgIconMedia"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 1035
+    },
+    "83a7e.svg": {
+      "aliases": [
+        "archive-reference:imgStateInactive",
+        "site-reference:imgStateInactive",
+        "sidebar-reference:imgStateInactive",
+        "main-reference:imgStateInactive"
+      ],
+      "dimensions": {
+        "width": "52",
+        "height": "12",
+        "viewBox": "0 0 52 12"
+      },
+      "bytes": 375
+    },
+    "0b3d0.svg": {
+      "aliases": [
+        "archive-reference:imgIcon"
+      ],
+      "dimensions": {
+        "width": "20",
+        "height": "20",
+        "viewBox": "0 0 20 20"
+      },
+      "bytes": 710
+    },
+    "cf6cb.svg": {
+      "aliases": [
+        "archive-reference:imgIcon1"
+      ],
+      "dimensions": {
+        "width": "20",
+        "height": "20",
+        "viewBox": "0 0 20 20"
+      },
+      "bytes": 756
+    },
+    "e2dfa.svg": {
+      "aliases": [
+        "archive-reference:imgIcon2"
+      ],
+      "dimensions": {
+        "width": "20",
+        "height": "20",
+        "viewBox": "0 0 20 20"
+      },
+      "bytes": 1412
+    },
+    "c571a.svg": {
+      "aliases": [
+        "archive-reference:imgIcon3"
+      ],
+      "dimensions": {
+        "width": "20",
+        "height": "20",
+        "viewBox": "0 0 20 20"
+      },
+      "bytes": 1275
+    },
+    "61b66.svg": {
+      "aliases": [
+        "archive-reference:imgIcon4"
+      ],
+      "dimensions": {
+        "width": "20",
+        "height": "20",
+        "viewBox": "0 0 20 20"
+      },
+      "bytes": 950
+    },
+    "687ab.svg": {
+      "aliases": [
+        "archive-reference:imgIcon5",
+        "site-reference:imgIcon",
+        "sidebar-reference:imgIcon",
+        "main-reference:imgIcon"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 456
+    },
+    "6761a.svg": {
+      "aliases": [
+        "archive-reference:imgIcon6"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 1017
+    },
+    "aa799.svg": {
+      "aliases": [
+        "archive-reference:imgFavicon",
+        "site-reference:imgFavicon6",
+        "sidebar-reference:imgFavicon7",
+        "main-reference:imgFavicon7"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 483
+    },
+    "0cf92.svg": {
+      "aliases": [
+        "archive-reference:imgFavicon1",
+        "site-reference:imgFavicon1",
+        "sidebar-reference:imgFavicon1",
+        "main-reference:imgFavicon1"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 1211
+    },
+    "b1e76.svg": {
+      "aliases": [
+        "archive-reference:imgFavicon2",
+        "command-reference:imgFavicon2",
+        "site-reference:imgFavicon5",
+        "sidebar-reference:imgFavicon6",
+        "main-reference:imgFavicon6"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 322
+    },
+    "a0df4.svg": {
+      "aliases": [
+        "archive-reference:imgFavicon3",
+        "site-reference:imgFaviconDrive",
+        "sidebar-reference:imgFaviconDrive",
+        "main-reference:imgFaviconDrive"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 409
+    },
+    "c712d.svg": {
+      "aliases": [
+        "archive-reference:imgFavicon4",
+        "command-reference:imgFaviconBlank"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 351
+    },
+    "caa3a.svg": {
+      "aliases": [
+        "command-reference:imgIconArrowRight",
+        "site-reference:imgIcon1",
+        "sidebar-reference:imgIcon1",
+        "main-reference:imgIcon1"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 456
+    },
+    "832a0.svg": {
+      "aliases": [
+        "command-reference:imgIconInfo"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 850
+    },
+    "85a6a.svg": {
+      "aliases": [
+        "command-reference:imgArrowIcon"
+      ],
+      "dimensions": {
+        "width": "14",
+        "height": "14",
+        "viewBox": "0 0 14 14"
+      },
+      "bytes": 460
+    },
+    "63d41.svg": {
+      "aliases": [
+        "command-reference:imgFavicon",
+        "site-reference:imgFavicon2",
+        "sidebar-reference:imgFavicon3",
+        "main-reference:imgFavicon3"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 468
+    },
+    "02093.svg": {
+      "aliases": [
+        "command-reference:imgFavicon1",
+        "site-reference:imgFavicon3",
+        "sidebar-reference:imgFavicon4",
+        "main-reference:imgFavicon4"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 722
+    },
+    "ea6dd.svg": {
+      "aliases": [
+        "command-reference:imgFavicon3"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 1100
+    },
+    "a3077.svg": {
+      "aliases": [
+        "site-reference:imgIconMore"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 1038
+    },
+    "dda43.svg": {
+      "aliases": [
+        "site-reference:imgIconLock"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 829
+    },
+    "a6475.svg": {
+      "aliases": [
+        "site-reference:imgIconHammer"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 1085
+    },
+    "77a3c.svg": {
+      "aliases": [
+        "site-reference:imgIconPlus",
+        "sidebar-reference:imgIconPlus",
+        "main-reference:imgIconPlus"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 444
+    },
+    "d2996.svg": {
+      "aliases": [
+        "site-reference:imgIconShare"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 766
+    },
+    "45ec9.svg": {
+      "aliases": [
+        "site-reference:imgIconVolume"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 1619
+    },
+    "a56d0.svg": {
+      "aliases": [
+        "site-reference:imgIconSkipForward"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 491
+    },
+    "aab68.svg": {
+      "aliases": [
+        "site-reference:imgIconPause"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 560
+    },
+    "0c9a0.svg": {
+      "aliases": [
+        "site-reference:imgIconSkipBack"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 490
+    },
+    "1f8e5.svg": {
+      "aliases": [
+        "site-reference:imgFaviconYoutube",
+        "sidebar-reference:imgFavicon2",
+        "main-reference:imgFavicon2"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 422
+    },
+    "d8aa1.svg": {
+      "aliases": [
+        "site-reference:imgIconArrowDown",
+        "sidebar-reference:imgIconArrowDown",
+        "main-reference:imgIconArrowDown"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 456
+    },
+    "9fb54.svg": {
+      "aliases": [
+        "site-reference:imgIconChevronRight",
+        "sidebar-reference:imgIconChevronRight",
+        "main-reference:imgIconChevronRight"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 314
+    },
+    "20d2c.svg": {
+      "aliases": [
+        "site-reference:imgIconSiteControls"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 1086
+    },
+    "d4cd0.svg": {
+      "aliases": [
+        "site-reference:imgIconLink"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 1379
+    },
+    "de36e.svg": {
+      "aliases": [
+        "site-reference:imgIconSidebar",
+        "sidebar-reference:imgIconSidebar",
+        "main-reference:imgIconSidebar"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 580
+    },
+    "108be.svg": {
+      "aliases": [
+        "site-reference:imgIcon2",
+        "sidebar-reference:imgIcon2",
+        "main-reference:imgIcon2"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 842
+    },
+    "52e0a.svg": {
+      "aliases": [
+        "site-reference:imgFavicon",
+        "sidebar-reference:imgFavicon",
+        "main-reference:imgFavicon"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 380
+    },
+    "dad7f.svg": {
+      "aliases": [
+        "site-reference:imgFavicon4",
+        "sidebar-reference:imgFavicon5",
+        "main-reference:imgFavicon5"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 1240
+    },
+    "e1841.svg": {
+      "aliases": [
+        "site-reference:imgIcon3",
+        "sidebar-reference:imgIcon3",
+        "main-reference:imgIcon3"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 800
+    },
+    "aa001.svg": {
+      "aliases": [
+        "site-reference:imgIcon4"
+      ],
+      "dimensions": {
+        "width": "15",
+        "height": "15",
+        "viewBox": "0 0 15 15"
+      },
+      "bytes": 1368
+    },
+    "89a0b.svg": {
+      "aliases": [
+        "site-reference:imgIcon5"
+      ],
+      "dimensions": {
+        "width": "15",
+        "height": "15",
+        "viewBox": "0 0 15 15"
+      },
+      "bytes": 974
+    },
+    "5d0e2.svg": {
+      "aliases": [
+        "site-reference:imgIcon6"
+      ],
+      "dimensions": {
+        "width": "15",
+        "height": "15",
+        "viewBox": "0 0 15 15"
+      },
+      "bytes": 1454
+    },
+    "0c4d7.svg": {
+      "aliases": [
+        "site-reference:imgIcon7"
+      ],
+      "dimensions": {
+        "width": "15",
+        "height": "15",
+        "viewBox": "0 0 15 15"
+      },
+      "bytes": 1003
+    },
+    "1950a.svg": {
+      "aliases": [
+        "sidebar-reference:imgPrev"
+      ],
+      "dimensions": {
+        "width": "13",
+        "height": "13",
+        "viewBox": "0 0 13 13"
+      },
+      "bytes": 496
+    },
+    "094f3.svg": {
+      "aliases": [
+        "sidebar-reference:imgPlay"
+      ],
+      "dimensions": {
+        "width": "14",
+        "height": "14",
+        "viewBox": "0 0 14 14"
+      },
+      "bytes": 660
+    },
+    "cde8f.svg": {
+      "aliases": [
+        "sidebar-reference:imgNext"
+      ],
+      "dimensions": {
+        "width": "13",
+        "height": "13",
+        "viewBox": "0 0 13 13"
+      },
+      "bytes": 496
+    },
+    "5e764.svg": {
+      "aliases": [
+        "sidebar-reference:imgVolume"
+      ],
+      "dimensions": {
+        "width": "15",
+        "height": "15",
+        "viewBox": "0 0 15 15"
+      },
+      "bytes": 1580
+    },
+    "07403.svg": {
+      "aliases": [
+        "main-reference:imgSearchIcon"
+      ],
+      "dimensions": {
+        "width": "13.44",
+        "height": "13.44",
+        "viewBox": "0 0 13.44 13.44"
+      },
+      "bytes": 610
+    },
+    "1c7c1.svg": {
+      "aliases": [
+        "main-reference:imgIcon4"
+      ],
+      "dimensions": {
+        "width": "15.36",
+        "height": "15.36",
+        "viewBox": "0 0 15.36 15.36"
+      },
+      "bytes": 729
+    },
+    "a6f8d.svg": {
+      "aliases": [
+        "main-reference:imgFavicon9"
+      ],
+      "dimensions": {
+        "width": "15.36",
+        "height": "15.36",
+        "viewBox": "0 0 15.36 15.36"
+      },
+      "bytes": 423
+    },
+    "da897.svg": {
+      "aliases": [
+        "main-reference:imgArrowIcon"
+      ],
+      "dimensions": {
+        "width": "13.44",
+        "height": "13.44",
+        "viewBox": "0 0 13.44 13.44"
+      },
+      "bytes": 474
+    },
+    "3be5d.svg": {
+      "aliases": [
+        "main-reference:imgFavicon10"
+      ],
+      "dimensions": {
+        "width": "15.36",
+        "height": "15.36",
+        "viewBox": "0 0 15.36 15.36"
+      },
+      "bytes": 556
+    },
+    "f6cbc.svg": {
+      "aliases": [
+        "main-reference:imgArrowIcon1"
+      ],
+      "dimensions": {
+        "width": "13.44",
+        "height": "13.44",
+        "viewBox": "0 0 13.44 13.44"
+      },
+      "bytes": 470
+    },
+    "27042.svg": {
+      "aliases": [
+        "main-reference:imgFavicon11"
+      ],
+      "dimensions": {
+        "width": "15.36",
+        "height": "15.36",
+        "viewBox": "0 0 15.36 15.36"
+      },
+      "bytes": 967
+    },
+    "da0dd.svg": {
+      "aliases": [
+        "main-reference:imgFavicon12"
+      ],
+      "dimensions": {
+        "width": "15.36",
+        "height": "15.36",
+        "viewBox": "0 0 15.36 15.36"
+      },
+      "bytes": 375
+    },
+    "63121.svg": {
+      "aliases": [
+        "main-reference:imgFavicon13"
+      ],
+      "dimensions": {
+        "width": "15.36",
+        "height": "15.36",
+        "viewBox": "0 0 15.36 15.36"
+      },
+      "bytes": 1105
+    },
+    "00713.svg": {
+      "aliases": [
+        "main-reference:imgIconShare"
+      ],
+      "dimensions": {
+        "width": "14.4",
+        "height": "14.4",
+        "viewBox": "0 0 14.4 14.4"
+      },
+      "bytes": 744
+    },
+    "278f7.svg": {
+      "aliases": [
+        "main-reference:imgIcon5"
+      ],
+      "dimensions": {
+        "width": "14.4",
+        "height": "14.4",
+        "viewBox": "0 0 14.4 14.4"
+      },
+      "bytes": 1231
+    },
+    "cffbf.svg": {
+      "aliases": [
+        "main-reference:imgIcon6"
+      ],
+      "dimensions": {
+        "width": "14.4",
+        "height": "14.4",
+        "viewBox": "0 0 14.4 14.4"
+      },
+      "bytes": 913
+    },
+    "a89d7.svg": {
+      "aliases": [
+        "main-reference:imgIcon7"
+      ],
+      "dimensions": {
+        "width": "14.4",
+        "height": "14.4",
+        "viewBox": "0 0 14.4 14.4"
+      },
+      "bytes": 1397
+    },
+    "92868.svg": {
+      "aliases": [
+        "main-reference:imgIcon8"
+      ],
+      "dimensions": {
+        "width": "15.36",
+        "height": "15.36",
+        "viewBox": "0 0 15.36 15.36"
+      },
+      "bytes": 1506
+    },
+    "485e0.svg": {
+      "aliases": [
+        "main-reference:imgIcon9"
+      ],
+      "dimensions": {
+        "width": "15.36",
+        "height": "15.36",
+        "viewBox": "0 0 15.36 15.36"
+      },
+      "bytes": 510
+    },
+    "f677e.svg": {
+      "aliases": [
+        "main-reference:imgIcon10"
+      ],
+      "dimensions": {
+        "width": "15.36",
+        "height": "15.36",
+        "viewBox": "0 0 15.36 15.36"
+      },
+      "bytes": 1410
+    },
+    "ab0c2.svg": {
+      "aliases": [
+        "main-reference:imgIcon11"
+      ],
+      "dimensions": {
+        "width": "15.36",
+        "height": "15.36",
+        "viewBox": "0 0 15.36 15.36"
+      },
+      "bytes": 460
+    },
+    "3598e.svg": {
+      "aliases": [
+        "main-reference:imgIcon12"
+      ],
+      "dimensions": {
+        "width": "12.48",
+        "height": "12.48",
+        "viewBox": "0 0 12.48 12.48"
+      },
+      "bytes": 452
+    },
+    "64c87.svg": {
+      "aliases": [
+        "main-reference:imgIconHammer"
+      ],
+      "dimensions": {
+        "width": "14.4",
+        "height": "14.4",
+        "viewBox": "0 0 14.4 14.4"
+      },
+      "bytes": 1075
+    },
+    "ca85b.svg": {
+      "aliases": [
+        "main-reference:imgIcon13"
+      ],
+      "dimensions": {
+        "width": "14.4",
+        "height": "14.4",
+        "viewBox": "0 0 14.4 14.4"
+      },
+      "bytes": 930
+    },
+    "9588e.svg": {
+      "aliases": [
+        "main-reference:imgIcon14"
+      ],
+      "dimensions": {
+        "width": "11.52",
+        "height": "11.52",
+        "viewBox": "0 0 11.52 11.52"
+      },
+      "bytes": 925
+    },
+    "25bf0.svg": {
+      "aliases": [
+        "main-reference:imgIcon15"
+      ],
+      "dimensions": {
+        "width": "13.44",
+        "height": "13.44",
+        "viewBox": "0 0 13.44 13.44"
+      },
+      "bytes": 1002
+    }
+  }
+}

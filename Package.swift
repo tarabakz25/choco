@@ -12,7 +12,7 @@ let package = Package(
     targets: [
         .target(name: "BrowserCore"),
         .target(name: "BrowserRuntime"),
-        .executableTarget(name: "BrowserApp", dependencies: ["BrowserCore", "BrowserRuntime"]),
+        .executableTarget(name: "BrowserApp", dependencies: ["BrowserCore", "BrowserRuntime"], resources: [.process("Resources")]),
         .testTarget(name: "BrowserCoreTests", dependencies: ["BrowserCore"]),
         .testTarget(name: "BrowserRuntimeTests", dependencies: ["BrowserRuntime"]),
         .testTarget(name: "BrowserAcceptanceTests", dependencies: ["BrowserCore", "BrowserRuntime"]),
