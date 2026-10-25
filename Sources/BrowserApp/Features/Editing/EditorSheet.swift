@@ -2,6 +2,11 @@ import BrowserCore
 import BrowserRuntime
 import SwiftUI
 
+enum EditorRequest: Identifiable {
+    case tabName(UUID), pinnedURL(UUID), folder(UUID?), renameFolder(UUID), space(UUID?), profile, favorite(UUID?)
+    var id: String { String(describing: self) }
+}
+
 struct EditorSheet: View {
     @Bindable var model: AppModel
     let request: EditorRequest
@@ -103,32 +108,5 @@ struct EditorSheet: View {
             else { model.send(.createFavorite(title: cleanName, url: url)) }
         }
         dismiss()
-    }
-}
-
-struct ArchiveSheet: View {
-    @Bindable var model: AppModel
-    @Environment(\.dismiss) private var dismiss
-    @State private var search = ""
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack { Text("アーカイブ").font(.title2.weight(.semibold)); Spacer(); Button("完了") { dismiss() }.keyboardShortcut(.cancelAction) }
-            TextField("閉じたタブを検索", text: $search).textFieldStyle(.roundedBorder)
-            if model.state.archive.isEmpty {
-                ContentUnavailableView("閉じたタブはありません", systemImage: "archivebox", description: Text("Todayのタブを閉じると、ここから復元できます。"))
-            } else {
-                List(model.state.archive.filter { search.isEmpty || "\($0.tab.displayTitle) \($0.tab.url)".localizedCaseInsensitiveContains(search) }) { entry in
-                    HStack {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(entry.tab.displayTitle).lineLimit(1)
-                            Text(entry.tab.url).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                        }
-                        Spacer()
-                        Text(entry.archivedAt, style: .date).font(.caption2).foregroundStyle(.secondary)
-                        Button("復元") { model.send(.restoreArchive(entry.id)); dismiss() }
-                    }.padding(.vertical, 4)
-                }.listStyle(.inset)
-            }
-        }.padding(24).frame(width: 660, height: 460)
     }
 }

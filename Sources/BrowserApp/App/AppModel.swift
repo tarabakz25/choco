@@ -13,6 +13,7 @@ import WebKit
     var commandError: String?
     var editor: EditorRequest?
     var showsArchive = false
+    var showsSiteControls = false
     var showsFind = false
     var findText = ""
     var focusedPaneID: UUID?
@@ -88,6 +89,7 @@ import WebKit
     }
 
     func showCommand(_ mode: CommandMode) {
+        showsSiteControls = false
         commandMode = mode
         commandError = nil
         commandText = mode == .navigate ? (activeSession?.url?.absoluteString ?? selectedTab?.url ?? "") : ""
@@ -245,25 +247,14 @@ import WebKit
     }
 
     func closeActive() {
+        if commandMode != nil { commandMode = nil; return }
+        if showsSiteControls { showsSiteControls = false; return }
+        if showsArchive { showsArchive = false; return }
         if let id = navigationTabID { send(.closeTab(id)) }
     }
 
     func split(with tab: BrowserTab) {
         guard let current = selectedTab, current.id != tab.id, current.spaceID == tab.spaceID else { return }
         send(.setSplit(leading: current.id, trailing: tab.id))
-    }
-}
-
-enum CommandMode { case newTab, navigate }
-
-enum EditorRequest: Identifiable {
-    case tabName(UUID), pinnedURL(UUID), folder(UUID?), renameFolder(UUID), space(UUID?), profile, favorite(UUID?)
-    var id: String { String(describing: self) }
-}
-
-extension Color {
-    init(hex: String) {
-        let value = UInt64(hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted), radix: 16) ?? 0x8D83C9
-        self.init(red: Double((value >> 16) & 255) / 255, green: Double((value >> 8) & 255) / 255, blue: Double(value & 255) / 255)
     }
 }
