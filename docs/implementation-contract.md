@@ -37,7 +37,7 @@ Semantics: Today close archives; pinned close retains registration and selects a
 - init(); session(id: UUID, profileID: UUID, initialURL: URL? = nil) -> WebSession; remove(id: UUID); retainOnly(_ ids: Set<UUID>).
 - existing session with same ID but different profile is discarded/replaced.
 
-URL input normalization shared runtime helper: public enum AddressResolver { public static func resolve(_ input: String) -> URL? } : accept HTTP/HTTPS and hostnames/localhost (HTTPS except localhost HTTP); other text becomes DuckDuckGo search; reject explicitly dangerous schemes (javascript/data/file); empty -> nil. No remote suggestions.
+URL input normalization shared runtime helper: public enum AddressResolver { public static func resolve(_ input: String) -> URL? } : accept HTTP/HTTPS and hostnames/localhost (HTTPS except localhost HTTP); other text becomes Google search; reject explicitly dangerous schemes (javascript/data/file); empty -> nil. No remote suggestions.
 
 ## SwiftUI BrowserApp
 

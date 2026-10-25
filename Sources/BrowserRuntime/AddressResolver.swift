@@ -28,7 +28,7 @@ public enum AddressResolver {
             }
         }
 
-        var search = URLComponents(string: "https://duckduckgo.com/")!
+        var search = URLComponents(string: "https://www.google.com/search")!
         search.queryItems = [URLQueryItem(name: "q", value: text)]
         return search.url
     }

@@ -38,7 +38,8 @@ struct AddressResolverTests {
         let result = try #require(AddressResolver.resolve(input))
         let components = try #require(URLComponents(url: result, resolvingAgainstBaseURL: false))
         #expect(components.scheme == "https")
-        #expect(components.host == "duckduckgo.com")
+        #expect(components.host == "www.google.com")
+        #expect(components.path == "/search")
         #expect(components.queryItems == [URLQueryItem(name: "q", value: input)])
     }
 
@@ -50,7 +51,7 @@ struct AddressResolverTests {
     @Test func internationalDomain() throws {
         let result = try #require(AddressResolver.resolve("例え.テスト/検索"))
         #expect(result.scheme == "https")
-        #expect(result.host != "duckduckgo.com")
+        #expect(result.host != "www.google.com")
         #expect(result.path == "/検索")
     }
 }

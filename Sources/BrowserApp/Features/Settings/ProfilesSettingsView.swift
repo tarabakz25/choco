@@ -15,7 +15,7 @@ struct ProfilesSettingsView: View {
                 profileList
                 VStack(alignment: .leading, spacing: 27) {
                     SettingsGroup {
-                        SettingsRow("Search engine") { SettingsFixedValue("DuckDuckGo") }
+                        SettingsRow("Search engine") { SettingsFixedValue("Google") }
                         SettingsRow("Manage search") { SettingsUnavailableButton("Search Settings…") }
                         SettingsUnavailableToggle("Search engine suggestions", divider: false)
                     }
