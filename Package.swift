@@ -20,6 +20,11 @@ let package = Package(
         .testTarget(name: "BrowserCoreTests", dependencies: ["BrowserCore"]),
         .testTarget(name: "BrowserRuntimeTests", dependencies: ["BrowserRuntime"]),
         .testTarget(name: "BrowserAcceptanceTests", dependencies: ["BrowserCore", "BrowserRuntime"]),
-        .testTarget(name: "BrowserAppTests", dependencies: ["BrowserApp"])
+        .testTarget(name: "BrowserAppTests", dependencies: ["BrowserApp"]),
+        .testTarget(
+            name: "MemoryOptimizationTests",
+            dependencies: ["BrowserCore", "BrowserRuntime", "BrowserApp"],
+            linkerSettings: [.linkedFramework("JavaScriptCore")]
+        )
     ]
 )

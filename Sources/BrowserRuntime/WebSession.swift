@@ -28,8 +28,9 @@ public final class WebSession: NSObject {
     @ObservationIgnored private var isDisposed = false
     @ObservationIgnored private var lastReportedURL: URL?
     @ObservationIgnored private var lastReportedTitle = ""
+    @ObservationIgnored private var pendingScroll: PageScrollOffset?
 
-    public init(id: UUID, profileID: UUID, initialURL: URL? = nil, configuration: WKWebViewConfiguration? = nil) {
+    public init(id: UUID, profileID: UUID, initialURL: URL? = nil, restoreScroll: PageScrollOffset? = nil, configuration: WKWebViewConfiguration? = nil) {
         self.id = id
         self.profileID = profileID
         let hasInvalidProfileIdentifier = profileID.uuidString == "00000000-0000-0000-0000-000000000000"
@@ -52,15 +53,32 @@ public final class WebSession: NSObject {
         webView.isInspectable = true
         #endif
         observeWebView()
-        if let initialURL { navigate(to: initialURL) }
+        if let initialURL { navigate(to: initialURL, restoreScroll: restoreScroll) }
     }
 
     public func navigate(to url: URL) {
+        navigate(to: url, restoreScroll: nil)
+    }
+
+    /// Reads scroll, media playback, and unsaved form edits. Nil means the page could not be asked.
+    public func capturePageMemory() async -> PageMemoryProbe? {
+        guard !isDisposed else { return nil }
+        do {
+            let value = try await webView.evaluateJavaScript(PageMemoryScript.source)
+            return PageMemoryScript.decode(value: value)
+        } catch {
+            return nil
+        }
+    }
+
+    private func navigate(to url: URL, restoreScroll: PageScrollOffset?) {
         guard !isDisposed else { return }
         guard Self.isWebNavigation(url) else {
+            pendingScroll = nil
             errorMessage = Localizer().text("This type of URL cannot be opened. Enter an HTTP or HTTPS URL.")
             return
         }
+        pendingScroll = restoreScroll
         errorMessage = nil
         webView.load(URLRequest(url: url))
     }
@@ -97,6 +115,7 @@ public final class WebSession: NSObject {
         downloads.removeAll()
         activeDownloadCount = 0
         downloadProgress = nil
+        pendingScroll = nil
         onPageChange = nil
         onOpenWindow = nil
         onClose = nil
@@ -209,12 +228,32 @@ extension WebSession: WKNavigationDelegate {
     public func webView(_ webView: WKWebView, navigationAction: WKNavigationAction, didBecome download: WKDownload) { beginTracking(download) }
     public func webView(_ webView: WKWebView, navigationResponse: WKNavigationResponse, didBecome download: WKDownload) { beginTracking(download) }
     public func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) { errorMessage = nil; updateState() }
-    public func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { updateState() }
+    public func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        updateState()
+        applyPendingScroll()
+    }
     public func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { reportNavigationError(error) }
     public func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { reportNavigationError(error) }
     public func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
         errorMessage = Localizer().text("The page stopped responding. Reload to continue.")
         updateState()
+    }
+
+    private func applyPendingScroll() {
+        guard let pendingScroll, !isDisposed, !webView.isLoading else { return }
+        let x = Self.jsNumber(pendingScroll.x)
+        let y = Self.jsNumber(pendingScroll.y)
+        self.pendingScroll = nil
+        let script = "window.scrollTo(\(x), \(y));"
+        Task { @MainActor [weak self] in
+            guard let self, !self.isDisposed else { return }
+            _ = try? await self.webView.evaluateJavaScript(script)
+        }
+    }
+
+    private static func jsNumber(_ value: Double) -> String {
+        let number = value.isFinite ? max(0, value) : 0
+        return String(format: "%.4f", locale: Locale(identifier: "en_US_POSIX"), number)
     }
 
     private func reportNavigationError(_ error: Error) {
