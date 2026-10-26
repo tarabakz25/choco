@@ -24,7 +24,8 @@ struct ChocoPressStyle: ButtonStyle {
             let hovered = isEnabled && hovering && !lit
             configuration.label
                 .contentShape(RoundedRectangle(cornerRadius: style.radius))
-                .overlay {
+                // Behind the label: an opaque tint (the New menu's) would otherwise cover its text and icon.
+                .background {
                     ZStack {
                         RoundedRectangle(cornerRadius: style.radius).fill(style.hoverTint).opacity(hovered ? 1 : 0)
                         RoundedRectangle(cornerRadius: style.radius).fill(style.tint).opacity(lit ? 1 : 0)
