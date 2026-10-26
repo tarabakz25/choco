@@ -105,21 +105,21 @@ public enum TabHibernationPlanner {
     /// Critical treats every eligible resident tab as idle and sets the cap to zero.
     static func idleThreshold(budget: HibernationBudget, pressure: MemoryPressureLevel) -> TimeInterval {
         switch pressure {
-        case .normal: budget.idleInterval
-        case .warning: budget.idleInterval / 2
-        case .critical: 0
+        case .normal: return budget.idleInterval
+        case .warning: return budget.idleInterval / 2
+        case .critical: return 0
         }
     }
 
     static func liveCap(budget: HibernationBudget, pressure: MemoryPressureLevel) -> Int {
         switch pressure {
         case .normal:
-            budget.maxLiveWebViews
+            return budget.maxLiveWebViews
         case .warning:
             guard budget.maxLiveWebViews > 0 else { return 0 }
             return max(1, budget.maxLiveWebViews / 2)
         case .critical:
-            0
+            return 0
         }
     }
 
