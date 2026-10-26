@@ -8,6 +8,8 @@ import WebKit
 @MainActor @Observable final class AppModel {
     let store: BrowserStore
     let pool = WebSessionPool()
+    let extensions: ExtensionManager
+    let extensionHost: ExtensionHost
     var commandMode: CommandMode?
     var commandText = ""
     var commandError: String?
@@ -30,16 +32,24 @@ import WebKit
 
     init(directory: URL? = nil) {
         let arguments = ProcessInfo.processInfo.arguments
+        let storeDirectory: URL
         if let directory {
-            store = BrowserStore(directory: directory)
+            storeDirectory = directory
         } else if let index = arguments.firstIndex(of: "--test-session"), arguments.indices.contains(index + 1),
            let sessionID = UUID(uuidString: arguments[index + 1]) {
-            let directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            storeDirectory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
                 .appendingPathComponent("OssArcUITests", isDirectory: true).appendingPathComponent(sessionID.uuidString, isDirectory: true)
-            store = BrowserStore(directory: directory)
         } else if let index = arguments.firstIndex(of: "--data-directory"), arguments.indices.contains(index + 1) {
-            store = BrowserStore(directory: URL(fileURLWithPath: arguments[index + 1], isDirectory: true))
-        } else { store = BrowserStore() }
+            storeDirectory = URL(fileURLWithPath: arguments[index + 1], isDirectory: true)
+        } else { storeDirectory = BrowserStore.defaultDirectory }
+        store = BrowserStore(directory: storeDirectory)
+        extensions = ExtensionManager(directory: storeDirectory.appendingPathComponent("Extensions", isDirectory: true))
+        extensionHost = ExtensionHost(manager: extensions)
+        extensionHost.model = self
+        extensions.delegate = extensionHost
+        pool.extensions = extensions
+        pool.onSessionAdded = { [extensionHost] session in extensionHost.sessionAdded(session) }
+        pool.onSessionRemoved = { [extensionHost] session in extensionHost.sessionRemoved(session) }
         if state.tabs.count == 1, let tab = state.tabs.first, tab.url == "about:blank", state.archive.isEmpty,
            let index = arguments.firstIndex(of: "--initial-url"), arguments.indices.contains(index + 1),
            let url = URL(string: arguments[index + 1]), ["http", "https"].contains(url.scheme?.lowercased() ?? "") {
@@ -88,6 +98,14 @@ import WebKit
         focusedPaneID = store.state.selectedTabID
         reconcile()
     }
+
+    /// The Space extensions should open new tabs in: the selected one when it uses this profile, else any that does.
+    func space(preferring profileID: UUID) -> BrowserSpace? {
+        if let selected = selectedSpace, selected.profileID == profileID { return selected }
+        return state.spaces.first { $0.profileID == profileID }
+    }
+
+    func showMainWindow() { browserWindow?.makeKeyAndOrderFront(nil) }
 
     func showCommand(_ mode: CommandMode) {
         showsSiteControls = false
@@ -186,6 +204,7 @@ import WebKit
         if let focusedPaneID, !visibleTabIDs.contains(focusedPaneID) { self.focusedPaneID = navigationTabID }
         recentTabIDs.removeAll { !validTabs.contains($0) }
         rememberSelectedTab()
+        extensionHost.activeTabMayHaveChanged(to: navigationTabID.flatMap { pool.existingSession(id: $0) })
     }
 
     /// Selecting a split pane must also update persisted selection without collapsing the split.
@@ -195,6 +214,7 @@ import WebKit
         if state.selectedTabID != id { store.send(.selectTab(id)) }
         focusedPaneID = id
         rememberSelectedTab()
+        extensionHost.activeTabMayHaveChanged(to: pool.existingSession(id: id))
     }
 
     private func rememberSelectedTab() {

@@ -1,8 +1,9 @@
 import AppKit
 import BrowserCore
 import SwiftUI
+import WebKit
 
-/// Actions for the current page; unavailable extension/media features are not represented.
+/// Actions for the current page, plus the buttons of installed extensions.
 struct SiteControlsView: View {
     @Bindable var model: AppModel
     @ChocoReducedMotion private var reduceMotion: Bool
@@ -74,6 +75,7 @@ struct SiteControlsView: View {
             }.buttonStyle(SiteSettingsButtonStyle()).disabled(pageURL == nil)
                 .accessibilityIdentifier("site-find")
             splitAction
+            extensionActions
             footer
         }
         .padding(8).frame(width: 220)
@@ -178,6 +180,44 @@ struct SiteControlsView: View {
             .frame(maxWidth: .infinity, alignment: .leading).frame(height: 40)
             .disabled(currentTab == nil || splitCandidates.isEmpty)
             .accessibilityIdentifier("split-toggle")
+        }
+    }
+
+    @ViewBuilder private var extensionActions: some View {
+        if let profileID = model.activeSession?.profileID ?? model.selectedSpace?.profileID {
+            let entries = model.extensions.loadedContexts(profileID: profileID)
+            if !entries.isEmpty {
+                let tab = model.extensionHost.activeTab(profileID: profileID)
+                sectionHeader("拡張機能")
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: ChocoSpace.sm), count: 4), spacing: ChocoSpace.sm) {
+                    ForEach(entries, id: \.item.id) { entry in
+                        let action = entry.context.action(for: tab)
+                        Button {
+                            model.showsSiteControls = false
+                            model.extensionHost.perform(entry.context)
+                        } label: {
+                            quickTile {
+                                if let icon = action?.icon(for: CGSize(width: 32, height: 32)) {
+                                    Image(nsImage: icon).resizable().aspectRatio(contentMode: .fit).frame(width: 16, height: 16)
+                                } else {
+                                    Image(systemName: "puzzlepiece.extension").font(.system(size: 13))
+                                }
+                            }
+                            .overlay(alignment: .topTrailing) {
+                                if let badge = action?.badgeText, !badge.isEmpty {
+                                    Text(badge).font(ChocoTheme.font(9, weight: .bold)).lineLimit(1)
+                                        .padding(.horizontal, 3).background(model.tint, in: Capsule()).offset(x: 3, y: -3)
+                                }
+                            }
+                        }
+                        .buttonStyle(ChocoPressStyle(radius: 7, tint: .white.opacity(0.2), hoverTint: .white.opacity(0.1)))
+                        .disabled(action?.isEnabled == false)
+                        .help(action?.label.isEmpty == false ? action?.label ?? entry.item.name : entry.item.name)
+                        .accessibilityLabel(entry.item.name)
+                        .accessibilityIdentifier("extension-action-\(entry.item.id)")
+                    }
+                }
+            }
         }
     }
 

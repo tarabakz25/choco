@@ -20,6 +20,7 @@ struct BrowserSettings: View {
                     ProfilesSettingsView(model: model, selectedProfileID: $selectedProfileID,
                                          onAddProfile: { showsProfileEditor = true },
                                          onShowPrivacyInfo: { showsPrivacyInfo = true })
+                case .extensions: ExtensionsSettingsView(model: model)
                 case .shortcuts: ShortcutsSettingsView(shortcutQuery: $shortcutQuery)
                 case .advanced: AdvancedSettingsView(onShowGeneral: { page = .general })
                 }
