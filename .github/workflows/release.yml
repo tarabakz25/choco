@@ -47,7 +47,7 @@ jobs:
           rm -f "$RUNNER_TEMP/certificate.p12"
 
       - name: Store notarization credentials
-        if: env.DEVELOPER_ID_APP != '' && env.APPLE_ID != '' && env.APPLE_TEAM_ID != '' && env.APPLE_APP_PASSWORD != ''
+        if: env.MACOS_CERTIFICATE != '' && env.DEVELOPER_ID_APP != '' && env.APPLE_ID != '' && env.APPLE_TEAM_ID != '' && env.APPLE_APP_PASSWORD != ''
         run: |
           xcrun notarytool store-credentials choco-notary \
             --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_PASSWORD"
@@ -70,10 +70,13 @@ jobs:
         run: |
           version="${TAG_NAME#v}"
           # サイトの最新版リンク（releases/latest/download/choco-browser.dmg）用に固定名のコピーも添付する
+          # shasum -c は記録されたファイル名を読むので、固定名のコピーには専用のチェックサムを作る
           cp "build/choco-browser-$version.dmg" build/choco-browser.dmg
+          (cd build && shasum -a 256 choco-browser.dmg > choco-browser.dmg.sha256)
           gh release create "$TAG_NAME" \
             "build/choco-browser-$version.dmg" \
             "build/choco-browser-$version.dmg.sha256" \
             build/choco-browser.dmg \
+            build/choco-browser.dmg.sha256 \
             --title "choco-browser $version" \
             --generate-notes

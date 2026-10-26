@@ -31,7 +31,7 @@ VERSION=0.1.0 BUILD_NUMBER=1 ./scripts/make-dmg.sh
    git push origin v0.1.0
    ```
 
-3. Actions の Release が DMG・SHA256・固定名 `choco-browser.dmg` を Releases に添付する
+3. Actions の Release が、バージョン付きの DMG と `.sha256`、固定名の `choco-browser.dmg` と `choco-browser.dmg.sha256` を Releases に添付する（サイトの検証手順は固定名のチェックサムを使う）
 4. サイトの「ダウンロード」ボタンは `releases/latest/download/choco-browser.dmg` を指すため、Release を公開すると最新版に切り替わる
 
 注意: `releases/latest` は pre-release を除外します。サイトのリンクを生かすため、α版でも pre-release にはしません。
