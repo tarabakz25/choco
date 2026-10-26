@@ -25,6 +25,7 @@ public final class WebSessionPool {
         remove(id: id)
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = websiteDataStore(for: profileID)
+        configuration.applyBrowserIdentity()
         let session = WebSession(id: id, profileID: profileID, configuration: configuration, extensionController: extensions?.controller(for: profileID))
         sessions[id] = session
         onSessionAdded?(session)
