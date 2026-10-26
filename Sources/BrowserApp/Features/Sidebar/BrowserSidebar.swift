@@ -444,20 +444,6 @@ struct BrowserSidebar: View {
                     }
                 }
             }.frame(height: 26)
-            Menu {
-                Text("\(model.selectedSpace?.name ?? "Space") · \(model.state.selectedProfile?.name ?? "")")
-                Divider()
-                Button("Spaceを編集…") { model.editor = .space(model.state.selectedSpaceID) }.accessibilityIdentifier("edit-space")
-                Button("Spaceを追加…") { model.editor = .space(nil) }.accessibilityIdentifier("create-space")
-                Button("プロファイルを追加…") { model.editor = .profile }.accessibilityIdentifier("create-profile")
-                Button("フォルダを作成…") { model.editor = .folder(nil) }.accessibilityIdentifier("add-folder")
-                Button(pinnedCollapsed ? "固定タブを展開" : "固定タブを折りたたむ") { pinnedCollapsed.toggle() }
-                Divider()
-                Button("アーカイブ…") { model.showsArchive = true }
-                SettingsLink { Text("設定…") }
-            } label: { DesignIcon("a3077", size: 16).opacity(0.7).frame(width: 26, height: 26) }
-                .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
-                .help("Spaceとプロファイル").accessibilityLabel("Spaceとプロファイル").accessibilityIdentifier("space-menu")
             Button { model.showsNewMenu.toggle() } label: {
                 // Figma "Plus Button (rotates to x)": a 45° turn while the New menu is open.
                 DesignIcon("77a3c", size: 16).opacity(0.7)
