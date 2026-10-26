@@ -1,0 +1,79 @@
+name: Release
+
+# v0.1.0 のようなタグを push すると、DMG をビルドして GitHub Releases に添付する。
+# Secrets（MACOS_CERTIFICATE ほか。docs/release.md 参照）が無い間は ad-hoc 署名の DMG になる。
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish DMG
+    runs-on: macos-latest
+    timeout-minutes: 45
+    env:
+      MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+      MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+      DEVELOPER_ID_APP: ${{ secrets.DEVELOPER_ID_APP }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          xcodebuild -version
+          swift --version
+
+      - name: Import Developer ID certificate
+        if: env.MACOS_CERTIFICATE != '' && env.DEVELOPER_ID_APP != ''
+        run: |
+          keychain="$RUNNER_TEMP/release.keychain-db"
+          keychain_password="$(uuidgen)"
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          echo "$MACOS_CERTIFICATE" | base64 --decode > "$RUNNER_TEMP/certificate.p12"
+          security import "$RUNNER_TEMP/certificate.p12" -P "$MACOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$keychain"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$keychain_password" "$keychain"
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          rm -f "$RUNNER_TEMP/certificate.p12"
+
+      - name: Store notarization credentials
+        if: env.DEVELOPER_ID_APP != '' && env.APPLE_ID != '' && env.APPLE_TEAM_ID != '' && env.APPLE_APP_PASSWORD != ''
+        run: |
+          xcrun notarytool store-credentials choco-notary \
+            --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_PASSWORD"
+          echo "NOTARY_PROFILE=choco-notary" >> "$GITHUB_ENV"
+
+      - name: Build DMG
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          export VERSION="${TAG_NAME#v}"
+          export BUILD_NUMBER="${{ github.run_number }}"
+          # 証明書が無い場合は ad-hoc 署名にする
+          if [ -z "$MACOS_CERTIFICATE" ]; then unset DEVELOPER_ID_APP; fi
+          ./scripts/make-dmg.sh
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          version="${TAG_NAME#v}"
+          # サイトの最新版リンク（releases/latest/download/choco-browser.dmg）用に固定名のコピーも添付する
+          cp "build/choco-browser-$version.dmg" build/choco-browser.dmg
+          gh release create "$TAG_NAME" \
+            "build/choco-browser-$version.dmg" \
+            "build/choco-browser-$version.dmg.sha256" \
+            build/choco-browser.dmg \
+            --title "choco-browser $version" \
+            --generate-notes

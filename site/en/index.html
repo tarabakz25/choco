@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>choco-browser — A macOS browser inspired by Arc's organization</title>
+<meta name="description" content="An open-source macOS browser built with SwiftUI and WebKit. Organize the web with vertical tabs and Spaces. No account, no telemetry. Alpha.">
+<meta name="theme-color" content="#1e1e1f">
+<link rel="icon" href="../assets/icon.png">
+<link rel="alternate" hreflang="ja" href="../">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="./"><img src="../assets/icon.png" alt="">choco-browser</a>
+    <nav class="nav" aria-label="Main">
+      <a href="#features">Features</a>
+      <a href="#install">Install</a>
+      <a href="#privacy">Privacy</a>
+      <a href="https://github.com/tarabakz25/choco">GitHub</a>
+      <a class="lang" href="../" hreflang="ja">日本語</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="hero">
+    <div class="wrap">
+      <div>
+        <img class="icon" src="../assets/icon.png" alt="choco-browser icon (placeholder)">
+        <div><span class="badge">Alpha · macOS 15.4+ · Apple Silicon</span></div>
+        <h1>Keep your tabs in order.</h1>
+        <p class="lead">choco-browser is a macOS browser that organizes the web with vertical tabs, Spaces and Favorites. Built with SwiftUI and WebKit, open source (MIT), currently in alpha.</p>
+        <div class="cta">
+          <a class="button" href="https://github.com/tarabakz25/choco/releases/latest/download/choco-browser.dmg">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5M4 20h16"/></svg>
+            Download for macOS (.dmg)
+          </a>
+          <a class="button secondary" href="#install">How to install</a>
+        </div>
+        <p class="fine">Latest: <a href="https://github.com/tarabakz25/choco/releases/latest">release notes and older versions</a> · The app is not yet notarized by Apple, so the first launch needs an extra step.</p>
+      </div>
+
+      <div class="mock" role="img" aria-label="Illustration of the choco-browser window">
+        <div class="side">
+          <div class="dots"><i></i><i></i><i></i></div>
+          <div class="favs"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="label">Pinned</div>
+          <div class="tab folder">▸ Research</div>
+          <div class="tab">GitHub</div>
+          <div class="label">Today</div>
+          <div class="tab on">choco-browser</div>
+          <div class="tab">Spec notes</div>
+          <div class="tab">Weather</div>
+        </div>
+        <div class="main">
+          <div class="command">URL, search, tabs, commands  ⌘L</div>
+          <div class="page">choco-browser</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section id="features">
+    <div class="wrap">
+      <h2>Features</h2>
+      <p class="sub">Aiming for Arc's organization and interaction feel, starting with everything needed for everyday browsing.</p>
+      <div class="grid">
+        <div class="card"><h3>Vertical tabs &amp; Favorites</h3><p>Today and Pinned tabs, up to 12 Favorites, and nested folders keep tabs organized.</p></div>
+        <div class="card"><h3>Spaces &amp; Profiles</h3><p>Give each Space an icon and color. Profiles isolate cookies and login state.</p></div>
+        <div class="card"><h3>Command bar</h3><p>Enter URLs, search, jump to an existing tab or run commands from a single field.</p></div>
+        <div class="card"><h3>Split view</h3><p>Show two tabs from the same Space side by side.</p></div>
+        <div class="card"><h3>Archive &amp; restore</h3><p>Closed Today tabs go to the Archive. Your layout is restored at launch.</p></div>
+        <div class="card"><h3>Chrome extensions</h3><p>Add Manifest V2 / V3 extensions through WebKit's Web Extension API, including by Chrome Web Store ID or URL.</p></div>
+      </div>
+      <p class="note">The alpha has a single window. Multiple windows, private browsing, auto-archive, Arc import, AI, sync and Boosts are not available yet.</p>
+
+      <h2 style="margin-top:56px">Shortcuts</h2>
+      <table>
+        <tbody>
+          <tr><td><kbd>⌘T</kbd></td><td>New tab, search, existing-tab suggestions</td></tr>
+          <tr><td><kbd>⌘L</kbd></td><td>Edit the current page's URL</td></tr>
+          <tr><td><kbd>⌘W</kbd> / <kbd>⇧⌘T</kbd></td><td>Archive a Today tab / restore a closed tab</td></tr>
+          <tr><td><kbd>⌃Tab</kbd> / <kbd>⌃⇧Tab</kbd></td><td>Switch tabs by recent use</td></tr>
+          <tr><td><kbd>⌃⌥←</kbd> / <kbd>⌃⌥→</kbd></td><td>Switch Space</td></tr>
+          <tr><td><kbd>⌘F</kbd> / <kbd>⌘R</kbd> / <kbd>⌘S</kbd></td><td>Find in page / reload / toggle sidebar</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="wrap">
+      <h2>Install</h2>
+      <p class="sub">Open the downloaded DMG and copy the app to Applications.</p>
+
+      <dl class="req" style="margin-bottom:28px">
+        <dt>OS</dt><dd>macOS 15.4 or later</dd>
+        <dt>Chip</dt><dd>Apple Silicon (M1 or later). Intel Macs are not supported.</dd>
+        <dt>License</dt><dd>MIT</dd>
+      </dl>
+
+      <ol class="steps">
+        <li><b>Download and open the DMG</b><span>Get <code>choco-browser.dmg</code> with the download button above and double-click it.</span></li>
+        <li><b>Drag to Applications</b><span>Drag <code>choco-browser</code> onto the <code>Applications</code> folder in the window that opens.</span></li>
+        <li><b>First launch: allow it with "Open Anyway"</b><span>The alpha is not notarized by Apple yet, so macOS blocks the first launch.<br>Open <code>choco-browser</code> from Applications and dismiss the warning. Then open <b>System Settings → Privacy &amp; Security</b>, click <b>Open Anyway</b> near the bottom, and authenticate with your password or Touch ID. It launches normally from then on.</span></li>
+      </ol>
+
+      <div class="note">
+        Prefer the Terminal? This does the same thing:
+<pre><code>xattr -dr com.apple.quarantine /Applications/choco-browser.app</code></pre>
+      </div>
+      <div class="note">
+        To verify your download, put the <code>.sha256</code> file from the <a href="https://github.com/tarabakz25/choco/releases/latest">release page</a> next to the DMG and run:
+<pre><code>shasum -a 256 -c choco-browser-0.1.0.dmg.sha256</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <section id="privacy">
+    <div class="wrap">
+      <h2>Privacy</h2>
+      <p class="sub">No account registration, sync, AI uploads, usage tracking or remote search suggestions from choco-browser itself.</p>
+      <div class="grid">
+        <div class="card"><h3>Your data stays local</h3><p>Your tab layout is stored in Application Support on your Mac. Cookies live in a per-Profile WebKit data store and are never copied between Profiles.</p></div>
+        <div class="card"><h3>Search only when you ask</h3><p>Only web searches you explicitly run are sent to Google. Regular page loads are handled by WebKit.</p></div>
+        <div class="card"><h3>Open source</h3><p>The source is on <a href="https://github.com/tarabakz25/choco">GitHub</a> under the MIT license.</p></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>choco-browser is an open-source alpha. The name is provisional.</p>
+    <p>An independent project, not affiliated with or endorsed by Arc / The Browser Company.</p>
+    <p>© 2026 choco-browser contributors · MIT License · Font: Inter (<a href="../assets/Inter-OFL.txt">SIL OFL 1.1</a>)</p>
+  </div>
+</footer>
+</body>
+</html>

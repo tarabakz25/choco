@@ -20,6 +20,16 @@ tasks:
     cmds:
       - ./scripts/build-app.sh release
 
+  dmg:
+    desc: リリースビルドして配布用 build/choco-browser-<version>.dmg を作成（VERSION=0.1.0 task dmg）
+    cmds:
+      - ./scripts/make-dmg.sh
+
+  icon:
+    desc: 仮アプリアイコン（AppSupport/AppIcon.icns, site/assets/icon.png）を再生成
+    cmds:
+      - ./scripts/make-icon.sh
+
   run:
     desc: ビルドして choco-browser.app を起動
     deps: [build]
