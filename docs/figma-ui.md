@@ -50,6 +50,20 @@ SwiftPMのResource bundleは`Contents/Resources/choco-browser_BrowserApp.bundle`
 
 検証結果は[verification.md](verification.md)に記載する。
 
+## 基底UI部品（`DesignSystem/Components`）
+
+Figmaの「Dialog Controls」（184:1422）と「Icons」（5:221）を、画面に依存しない部品としてまとめた。色は`ChocoTheme.Settings`／`ChocoTheme.Dialog`（`ChocoControlTheme.swift`）に、Figmaの変数名どおりに置く。
+
+| 部品 | 引数 | Figma上の寸法・状態 |
+| --- | --- | --- |
+| `ChocoButton` / `.buttonStyle(.choco(...))` | `kind`（primary・secondary・blue・indigo）、`keyHint`（"ESC"などのキーチップ） | 高さ32・左右16・角8。Default／Hover／Pressed／Disabledは環境から決まる。無効はPrimary・Secondaryが不透明度45%、Blueは専用の淡色 |
+| `ChocoTextField` | `tone`（settings・space）、`focus`、`onSubmit` | settingsは高さ36でフォーカス時に2ptの紫枠、spaceは高さ40で枠は変えずキャレットが`dialog/caret` |
+| `ChocoColorSwatch` | 色、`isSelected`、`label`（VoiceOver用） | 32ptの領域に24ptの円、選択中は2ptのリング |
+| `ChocoSlider` | `value`、`in`、`step` | 高さ20・トラック4・つまみ16。幅は親に従う（Figmaは288） |
+| `ChocoIcon` | `DesignIcon(.plus)`の形で使う | Figmaの全44アイコンを意味の名前で引ける |
+
+FigmaではPrimary・Blue・Indigoにホバー／押下専用の色がなく、無効のIndigoも通常と同じ。そのためSecondaryだけが状態で色を変える。デザインに色が追加されたら`ChocoButtonKind.palette(for:)`の1か所を直す。既存の画面（`EditorSheet`・設定の`SettingsButtonStyle`など）はこの部品へ未移行で、移行は画面ごとに外観を確認しながら行う。
+
 ## 余白（rem基準）
 
 余白は`DesignSystem/ChocoSpace.swift`のトークンを使う。1rem=16pt。`xxs`2 / `xs`4 / `sm`8 / `md`12 / `lg`16 / `xl`24 / `xxl`32。`rem`を変えると全体の余白が連動する。**Figmaの実測値が優先**で、トークンと値が一致する箇所だけトークンを使い、スケール外の値（5・6・9・10・14・18・26・27など）はFigmaに合わせてリテラルのまま残す。サイドバーは12.5rem(200pt)・内側余白`sm`、コンテンツ余白`sm`、サイト操作は13.75rem(220pt)。
