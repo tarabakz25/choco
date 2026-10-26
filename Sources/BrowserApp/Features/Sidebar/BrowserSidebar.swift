@@ -11,6 +11,7 @@ struct BrowserSidebar: View {
     @State private var urlFieldPressed = false
     @AppStorage("choco.hidesEmptyFavoritesHint") private var hidesFavoritesHint = false
     @State private var favoritesDropTargeted = false
+    @State private var pinnedDropTargeted = false
     @State private var tabPresentation: SidebarTabPresentation
     @ChocoReducedMotion private var reduceMotion: Bool
 
@@ -170,11 +171,7 @@ struct BrowserSidebar: View {
             .help("ヒントを閉じる").accessibilityLabel("ヒントを閉じる")
         }
         .contentShape(RoundedRectangle(cornerRadius: 10))
-        .dropDestination(for: String.self) { values, _ in
-            guard let value = values.first, let id = UUID(uuidString: value),
-                  let tab = model.state.tabs.first(where: { $0.id == id }), tab.url != "about:blank" else { return false }
-            model.send(.createFavorite(title: tab.displayTitle, url: tab.url)); return true
-        } isTargeted: { favoritesDropTargeted = $0 }
+        .onDrop(of: [.plainText], delegate: FavoriteDropDelegate(model: model, tracksSlot: false, animation: reduceMotion ? nil : ChocoMotion.favoriteReflow, targeted: $favoritesDropTargeted))
         .accessibilityElement(children: .combine)
         .accessibilityLabel("ドラッグしてお気に入りに追加")
         .accessibilityIdentifier("favorites-empty")
@@ -188,31 +185,52 @@ struct BrowserSidebar: View {
             .accessibilityIdentifier("space-name")
     }
 
+    private var favoriteCells: [FavoriteCell] {
+        var cells = model.state.favorites.map(FavoriteCell.favorite)
+        if let index = model.favoriteDropIndex { cells.insert(.placeholder, at: min(max(0, index), cells.count)) }
+        if model.state.favorites.count < 12 { cells.append(.add) }
+        return cells
+    }
+
     private var favorites: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.fixed(56), spacing: 8), count: 3), alignment: .leading, spacing: 10) {
-            ForEach(model.state.favorites) { favorite in
-                Button { model.send(.selectFavorite(favorite.id)) } label: {
-                    SiteIcon(url: favorite.url, size: 16)
+        LazyVGrid(columns: Array(repeating: GridItem(.fixed(FavoriteDropDelegate.tileWidth), spacing: FavoriteDropDelegate.columnGap), count: 3), alignment: .leading, spacing: FavoriteDropDelegate.rowGap) {
+            ForEach(favoriteCells) { cell in
+                switch cell {
+                case .favorite(let favorite):
+                    Button { model.send(.selectFavorite(favorite.id)) } label: {
+                        SiteIcon(url: favorite.url, size: 16)
+                            .frame(width: 56, height: 38)
+                            .background(model.state.selectedFavoriteID == favorite.id ? ChocoTheme.selected : ChocoTheme.tile, in: RoundedRectangle(cornerRadius: 8))
+                    }
+                    .buttonStyle(ChocoPressStyle(radius: 8)).help(favorite.title)
+                    .accessibilityLabel(favorite.title).accessibilityIdentifier("favorite-\(favorite.id)")
+                    .contextMenu {
+                        Button("編集…") { model.editor = .favorite(favorite.id) }
+                        Button("削除", role: .destructive) { model.send(.deleteFavorite(favorite.id)) }
+                    }
+                    .transition(.scale(scale: 0.8).combined(with: .opacity))
+                case .placeholder:
+                    // Where the dragged tab will land.
+                    RoundedRectangle(cornerRadius: 8)
+                        .strokeBorder(Color.white.opacity(0.4), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+                        .background(ChocoTheme.tile.opacity(0.5), in: RoundedRectangle(cornerRadius: 8))
                         .frame(width: 56, height: 38)
-                        .background(model.state.selectedFavoriteID == favorite.id ? ChocoTheme.selected : ChocoTheme.tile, in: RoundedRectangle(cornerRadius: 8))
+                        .transition(.scale(scale: 0.8).combined(with: .opacity))
+                        .accessibilityHidden(true)
+                case .add:
+                    Button { model.editor = .favorite(nil) } label: {
+                        DesignIcon("77a3c", size: 16).opacity(0.7)
+                            .frame(width: 56, height: 38)
+                            .background(ChocoTheme.tile, in: RoundedRectangle(cornerRadius: 8))
+                    }
+                    .buttonStyle(ChocoPressStyle(radius: 8)).help("お気に入りを追加")
+                    .accessibilityLabel("お気に入りを追加").accessibilityIdentifier("add-favorite")
                 }
-                .buttonStyle(ChocoPressStyle(radius: 8)).help(favorite.title)
-                .accessibilityLabel(favorite.title).accessibilityIdentifier("favorite-\(favorite.id)")
-                .contextMenu {
-                    Button("編集…") { model.editor = .favorite(favorite.id) }
-                    Button("削除", role: .destructive) { model.send(.deleteFavorite(favorite.id)) }
-                }
-            }
-            if model.state.favorites.count < 12 {
-                Button { model.editor = .favorite(nil) } label: {
-                    DesignIcon("77a3c", size: 16).opacity(0.7)
-                        .frame(width: 56, height: 38)
-                        .background(ChocoTheme.tile, in: RoundedRectangle(cornerRadius: 8))
-                }
-                .buttonStyle(ChocoPressStyle(radius: 8)).help("お気に入りを追加")
-                .accessibilityLabel("お気に入りを追加").accessibilityIdentifier("add-favorite")
             }
         }
+        .animation(reduceMotion ? nil : ChocoMotion.favoriteReflow, value: favoriteCells)
+        // The delegate reads the pointer in the grid's own space, so it sits before any padding.
+        .onDrop(of: [.plainText], delegate: FavoriteDropDelegate(model: model, tracksSlot: true, animation: reduceMotion ? nil : ChocoMotion.favoriteReflow, targeted: $favoritesDropTargeted))
         // Figma leaves 12pt between the tiles and the folder row; the stack already adds 6.
         .padding(.bottom, 6)
     }
@@ -232,10 +250,58 @@ struct BrowserSidebar: View {
                 ForEach(presentedSpaceTabs.filter { $0.tab.isPinned && $0.tab.folderID == nil }) { item in presentedTabRow(item) }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .overlay(alignment: .topLeading) {
+            // With nothing pinned yet there is no row to drop on. The zone floats over the divider while a tab
+            // is dragged, so the list underneath never shifts.
+            if draggedTabCanPin && pinnedIsEmpty {
+                pinDropHint
+                    .background(ChocoTheme.sidebar, in: RoundedRectangle(cornerRadius: 8))
+                    .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .top)))
+                    .tabDrop(model: model, targeted: $pinnedDropTargeted) { id in
+                        model.send(.pinTab(id)); return true
+                    }
+            }
+        }
+        .animation(reduceMotion ? nil : ChocoMotion.favoriteReflow, value: draggedTabCanPin)
+        .background {
+            RoundedRectangle(cornerRadius: 8).fill(Color.white.opacity(pinnedDropTargeted ? 0.1 : 0)).allowsHitTesting(false)
+        }
+        .contentShape(Rectangle())
+        .tabDrop(model: model, targeted: $pinnedDropTargeted) { id in
+            guard let tab = model.state.tabs.first(where: { $0.id == id }) else { return false }
+            if tab.isPinned { model.send(.moveTab(id, spaceID: tab.spaceID, folderID: nil)) }
+            else { model.send(.pinTab(id)) }
+            return true
+        }
         .contextMenu {
             Button("フォルダを作成…") { model.editor = .folder(nil) }.accessibilityIdentifier("add-folder")
             Button(pinnedCollapsed ? "固定タブを展開" : "固定タブを折りたたむ") { pinnedCollapsed.toggle() }
         }
+    }
+
+    private var pinnedIsEmpty: Bool { rootFolders.isEmpty && !spaceTabs.contains { $0.isPinned } }
+
+    private var draggedTabCanPin: Bool {
+        guard let id = model.draggingTabID, let tab = model.state.tabs.first(where: { $0.id == id }) else { return false }
+        return !tab.isPinned
+    }
+
+    /// Only shown mid-drag so a Space with no pinned tabs still has somewhere to drop one.
+    private var pinDropHint: some View {
+        HStack(spacing: 6) {
+            DesignIcon("9fb54", size: 12).opacity(0.6)
+            Text("ここにドロップして固定").font(ChocoTheme.font(11, weight: .semibold)).foregroundStyle(ChocoTheme.secondary)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 10).frame(height: 32)
+        .overlay {
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(Color.white.opacity(pinnedDropTargeted ? 0.6 : 0.34), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("ここにドロップして固定")
+        .accessibilityIdentifier("pin-drop-hint")
     }
 
     private var clearDivider: some View {
@@ -290,8 +356,7 @@ struct BrowserSidebar: View {
                     Divider()
                     Button("フォルダを削除", role: .destructive) { model.send(.deleteFolder(folder.id)) }
                 }
-                .dropDestination(for: String.self) { values, _ in
-                    guard let string = values.first, let id = UUID(uuidString: string) else { return false }
+                .tabDrop(model: model) { id in
                     model.send(.moveTab(id, spaceID: folder.spaceID, folderID: folder.id)); return true
                 }
             if !collapsedFolders.contains(folder.id) {
@@ -354,26 +419,35 @@ struct BrowserSidebar: View {
 
     private func tabRow(_ tab: BrowserTab) -> some View {
         HStack(spacing: 0) {
-            Button { model.select(tab) } label: {
+            // Not a Button: a button owns the mouse-down, so a drag could never start from it.
+            TabRowSurface(model: model, tab: tab, isSelected: isSelected(tab)) {
                 HStack(spacing: 6) {
                     SiteIcon(url: tab.url, size: 16)
                     Text(tab.displayTitle).font(ChocoTheme.font(13, weight: .medium)).lineLimit(1).truncationMode(.tail)
                     Spacer(minLength: 0)
                 }
                 .padding(.leading, 10).padding(.trailing, 6).frame(height: 32)
-                .background(isSelected(tab) ? ChocoTheme.selected : Color.clear, in: RoundedRectangle(cornerRadius: 8))
-                .contentShape(Rectangle())
             }
-            .buttonStyle(ChocoPressStyle(radius: 8))
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(tab.displayTitle)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction { model.select(tab) }
             .accessibilityIdentifier("select-tab-\(tab.id)")
         }
+        // The row being dragged stays behind as a faint ghost.
+        .opacity(model.draggingTabID == tab.id ? 0.35 : 1)
+        .animation(reduceMotion ? nil : ChocoMotion.tabLifecycle, value: model.draggingTabID == tab.id)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(tab.displayTitle)
         .accessibilityIdentifier("tab-\(tab.id)")
         .contextMenu { tabMenu(tab) }
-        .draggable(tab.id.uuidString)
-        .dropDestination(for: String.self) { values, _ in
-            guard let value = values.first, let id = UUID(uuidString: value) else { return false }
+        .tabDrop(model: model) { id in
+            guard let dragged = model.state.tabs.first(where: { $0.id == id }) else { return false }
+            if tab.isPinned && !dragged.isPinned {
+                // Pin it into the target's folder, then slot it in front of the target.
+                model.send(.moveTab(id, spaceID: tab.spaceID, folderID: tab.folderID))
+                model.send(.pinTab(id))
+            }
             model.send(.moveTabBefore(id, beforeID: tab.id)); return true
         }
     }
@@ -411,7 +485,7 @@ struct BrowserSidebar: View {
 
     private var versionPill: some View {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
-        return Text(version.map { "choco \($0) · α" } ?? "choco · α")
+        return Text(version.map { "choco-browser \($0) · α" } ?? "choco-browser · α")
             .font(ChocoTheme.font(11, weight: .semibold))
             .frame(maxWidth: .infinity).frame(height: 22)
             .background(ChocoTheme.field, in: Capsule())
@@ -437,8 +511,7 @@ struct BrowserSidebar: View {
                         }
                         .buttonStyle(ChocoPressStyle()).help(space.name).accessibilityLabel("Space: \(space.name)")
                         .accessibilityIdentifier("space-\(space.id)")
-                        .dropDestination(for: String.self) { values, _ in
-                            guard let value = values.first, let id = UUID(uuidString: value) else { return false }
+                        .tabDrop(model: model) { id in
                             model.send(.moveTab(id, spaceID: space.id, folderID: nil)); return true
                         }
                     }
@@ -457,6 +530,110 @@ struct BrowserSidebar: View {
             .accessibilityValue(model.showsNewMenu ? "メニューを表示中" : "")
             .accessibilityIdentifier("new-menu")
         }.frame(height: 26)
+    }
+}
+
+/// A sidebar tab row: tints on hover, press and selection like `ChocoPressStyle`, selects on click, and lifts
+/// off the sidebar when dragged (`TabDragSource` owns the mouse for all three).
+private struct TabRowSurface<Content: View>: View {
+    let model: AppModel
+    let tab: BrowserTab
+    let isSelected: Bool
+    @ViewBuilder let content: Content
+    @ChocoReducedMotion private var reduceMotion: Bool
+    @State private var hovering = false
+    @State private var pressed = false
+
+    var body: some View {
+        content
+            .background {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 8).fill(ChocoTheme.selected).opacity(isSelected ? 1 : 0)
+                    RoundedRectangle(cornerRadius: 8).fill(ChocoTheme.tile).opacity(hovering && !pressed ? 1 : 0)
+                    RoundedRectangle(cornerRadius: 8).fill(ChocoTheme.selected).opacity(pressed ? 1 : 0)
+                }.allowsHitTesting(false)
+            }
+            .contentShape(Rectangle())
+            .onHover { hovering = $0 }
+            .overlay {
+                TabDragSource(model: model, tab: tab, onPress: { pressed = $0 }, onClick: { model.select(tab) })
+            }
+            .animation(reduceMotion ? nil : .timingCurve(0.2, 0.8, 0.2, 1, duration: pressed ? 0.07 : 0.23), value: pressed)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hovering)
+    }
+}
+
+extension View {
+    /// Accepts the sidebar tab being dragged and moves it (so the pointer never shows a copy badge).
+    fileprivate func tabDrop(model: AppModel, targeted: Binding<Bool>? = nil, perform: @escaping (UUID) -> Bool) -> some View {
+        onDrop(of: [.plainText], delegate: TabMoveDropDelegate(model: model, targeted: targeted, perform: perform))
+    }
+}
+
+private struct TabMoveDropDelegate: DropDelegate {
+    let model: AppModel
+    let targeted: Binding<Bool>?
+    let perform: (UUID) -> Bool
+
+    func validateDrop(info: DropInfo) -> Bool { model.draggingTabID != nil }
+    func dropEntered(info: DropInfo) { targeted?.wrappedValue = true }
+    func dropUpdated(info: DropInfo) -> DropProposal? { DropProposal(operation: .move) }
+    func dropExited(info: DropInfo) { targeted?.wrappedValue = false }
+    func performDrop(info: DropInfo) -> Bool {
+        targeted?.wrappedValue = false
+        guard let id = model.draggingTabID else { return false }
+        model.draggingTabID = nil
+        return perform(id)
+    }
+}
+
+enum FavoriteCell: Identifiable, Equatable {
+    case favorite(BrowserFavorite), placeholder, add
+    var id: String {
+        switch self {
+        case .favorite(let favorite): favorite.id.uuidString
+        case .placeholder: "drop-placeholder"
+        case .add: "add-favorite"
+        }
+    }
+}
+
+/// Dropping a tab on Favorites moves it there. Over the tile grid a dashed slot follows the pointer
+/// and the tiles make room for it; releasing puts the favorite in that slot.
+private struct FavoriteDropDelegate: DropDelegate {
+    static let tileWidth: CGFloat = 56, columnGap: CGFloat = 8, rowGap: CGFloat = 10, tileHeight: CGFloat = 38
+    let model: AppModel
+    let tracksSlot: Bool
+    let animation: Animation?
+    @Binding var targeted: Bool
+
+    func validateDrop(info: DropInfo) -> Bool { model.draggedTabCanBecomeFavorite }
+
+    func dropEntered(info: DropInfo) { targeted = true; model.dragOverFavorites = true; track(info) }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? { track(info); return DropProposal(operation: .move) }
+
+    func dropExited(info: DropInfo) {
+        targeted = false
+        model.dragOverFavorites = false
+        withAnimation(animation) { model.favoriteDropIndex = nil }
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        targeted = false
+        model.dragOverFavorites = false
+        let index = model.favoriteDropIndex ?? model.state.favorites.count
+        var accepted = false
+        withAnimation(animation) { accepted = model.dropDraggedTabOnFavorites(at: index) }
+        return accepted
+    }
+
+    private func track(_ info: DropInfo) {
+        guard tracksSlot else { return }
+        let column = min(2, max(0, Int(info.location.x / (Self.tileWidth + Self.columnGap))))
+        let row = max(0, Int(info.location.y / (Self.tileHeight + Self.rowGap)))
+        let index = min(model.state.favorites.count, row * 3 + column)
+        if model.favoriteDropIndex != index { withAnimation(animation) { model.favoriteDropIndex = index } }
     }
 }
 

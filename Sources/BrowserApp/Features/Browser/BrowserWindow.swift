@@ -515,7 +515,7 @@ private struct BrowserPane: View {
     }
 }
 
-private struct WebViewMount: NSViewRepresentable {
+struct WebViewMount: NSViewRepresentable {
     let webView: WKWebView
     let onFocus: () -> Void
     func makeNSView(context: Context) -> WebViewContainer {
@@ -557,7 +557,7 @@ private final class WindowReferenceView: NSView {
     }
 }
 
-private final class WebViewContainer: NSView {
+final class WebViewContainer: NSView {
     var onFocus: (() -> Void)?
     override func layout() {
         super.layout()

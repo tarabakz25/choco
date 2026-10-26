@@ -32,6 +32,7 @@ import SwiftUI
     func applicationDidResignActive(_ notification: Notification) { model?.finishTabCycle() }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         guard let model else { return .terminateNow }
+        model.closeDetachedWindows()
         Task { await model.store.flush(); sender.reply(toApplicationShouldTerminate: true) }
         return .terminateLater
     }

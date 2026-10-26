@@ -18,6 +18,12 @@ import WebKit
     var showsFind = false
     var findText = ""
     var focusedPaneID: UUID?
+    /// The sidebar tab currently being dragged; drop zones appear while it is set.
+    var draggingTabID: UUID?
+    /// Slot a dragged tab would take in the Favorites grid while it hovers there.
+    var favoriteDropIndex: Int?
+    /// The pointer is over the Favorites area with a droppable tab; the drag image shrinks to a tile.
+    var dragOverFavorites = false
     @ObservationIgnored weak var browserWindow: NSWindow?
     @ObservationIgnored private var favoriteSessions: [String: UUID] = [:]
     @ObservationIgnored private var knownURLs: [UUID: String] = [:]
@@ -27,6 +33,7 @@ import WebKit
     @ObservationIgnored private var tabCycleOrder: [UUID]?
     @ObservationIgnored private var tabCycleIndex = 0
     @ObservationIgnored private var tabCycleSpaceID: UUID?
+    @ObservationIgnored private var detachedWindows: [UUID: DetachedTabWindow] = [:]
 
     init(directory: URL? = nil) {
         let arguments = ProcessInfo.processInfo.arguments
@@ -89,7 +96,16 @@ import WebKit
         reconcile()
     }
 
+    /// The page that browser shortcuts act on: a detached window's own page while it is key, else the active tab.
+    var keySession: WebSession? {
+        if let window = NSApp.keyWindow, let detached = detachedWindows.values.first(where: { $0.window === window }) { return detached.session }
+        return activeSession
+    }
+
+    func showMainWindow() { browserWindow?.makeKeyAndOrderFront(nil) }
+
     func showCommand(_ mode: CommandMode) {
+        showMainWindow()
         showsSiteControls = false
         showsNewMenu = false
         commandMode = mode
@@ -270,5 +286,62 @@ import WebKit
     func split(with tab: BrowserTab) {
         guard let current = selectedTab, current.id != tab.id, current.spaceID == tab.spaceID else { return }
         send(.setSplit(leading: current.id, trailing: tab.id))
+    }
+
+    // MARK: Dragging a tab out of the sidebar
+
+    func beginTabDrag(_ id: UUID) { draggingTabID = id }
+
+    /// Called when the AppKit drag session ends. A drop target that accepted the tab has already cleared
+    /// `draggingTabID`; a tab still being dragged that was released over no window of ours opens its own window.
+    func endTabDrag(operation: NSDragOperation, cancelled: Bool, at point: NSPoint) {
+        let id = draggingTabID
+        draggingTabID = nil
+        favoriteDropIndex = nil
+        dragOverFavorites = false
+        guard let id, operation.isEmpty, !cancelled, state.tabs.contains(where: { $0.id == id }) else { return }
+        // Drag-image windows can't become main, so only real windows count as "inside".
+        guard !NSApp.windows.contains(where: { $0.isVisible && $0.canBecomeMain && $0.frame.contains(point) }) else { return }
+        detach(id, near: point)
+    }
+
+    /// Whether the dragged tab could become a favorite: a real page that isn't one already, with room left.
+    var draggedTabCanBecomeFavorite: Bool {
+        guard let id = draggingTabID, let tab = state.tabs.first(where: { $0.id == id }), tab.url != "about:blank" else { return false }
+        return state.favorites.count < 12 && !state.favorites.contains { $0.url == tab.url }
+    }
+
+    /// Moves the dragged tab into Favorites at `index`; the tab leaves the list, and stays on screen if it was the open page.
+    func dropDraggedTabOnFavorites(at index: Int) -> Bool {
+        guard draggedTabCanBecomeFavorite, let id = draggingTabID, let tab = state.tabs.first(where: { $0.id == id }) else { return false }
+        draggingTabID = nil
+        favoriteDropIndex = nil
+        dragOverFavorites = false
+        let wasOpen = state.selectedTabID == id
+        send(.insertFavorite(title: tab.displayTitle, url: tab.url, at: index))
+        let slot = min(max(0, index), state.favorites.count - 1)
+        send(.detachTab(id))
+        if wasOpen, state.favorites.indices.contains(slot) { send(.selectFavorite(state.favorites[slot].id)) }
+        return true
+    }
+
+    func detach(_ id: UUID, near point: NSPoint) {
+        guard let tab = state.tabs.first(where: { $0.id == id }) else { return }
+        let live = session(for: tab)
+        guard pool.release(id: id) === live else { return }
+        send(.detachTab(id))
+        // Popups opened from the detached page join the main window in the tab's Space.
+        configure(live, tabID: nil, spaceID: tab.spaceID)
+        let window = DetachedTabWindow(model: self, tab: tab, session: live)
+        live.onClose = { [weak window] in window?.finish() }
+        detachedWindows[id] = window
+        window.show(near: point)
+    }
+
+    func releaseDetached(_ id: UUID) { detachedWindows[id] = nil }
+
+    /// Closes every detached window, archiving its tab, so quitting never loses an open page.
+    func closeDetachedWindows() {
+        for window in Array(detachedWindows.values) { window.finish() }
     }
 }

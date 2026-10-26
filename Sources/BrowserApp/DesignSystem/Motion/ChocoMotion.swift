@@ -21,6 +21,8 @@ enum ChocoMotion {
     // defaults implement the requested interactive transitions.
     static let command = Animation.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.14)
     static let dismiss = Animation.easeOut(duration: 0.14)
+    /// Favorites tiles making room for a dragged tab, and settling it into its slot.
+    static let favoriteReflow = Animation.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.22)
     static let tabLifecycle = Animation.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.18)
 }
 

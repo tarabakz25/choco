@@ -32,10 +32,10 @@ import SwiftUI
                 Button("サイドバーを切り替える") { model.send(.toggleSidebar) }.keyboardShortcut("s")
             }
             CommandGroup(after: .toolbar) {
-                Button("再読み込み") { model.activeSession?.reload() }.keyboardShortcut("r")
-                Button("前のページ") { model.activeSession?.goBack() }.keyboardShortcut("[", modifiers: .command)
-                Button("次のページ") { model.activeSession?.goForward() }.keyboardShortcut("]", modifiers: .command)
-                Button("ページ内を検索") { model.showsFind.toggle() }.keyboardShortcut("f")
+                Button("再読み込み") { model.keySession?.reload() }.keyboardShortcut("r")
+                Button("前のページ") { model.keySession?.goBack() }.keyboardShortcut("[", modifiers: .command)
+                Button("次のページ") { model.keySession?.goForward() }.keyboardShortcut("]", modifiers: .command)
+                Button("ページ内を検索") { model.showMainWindow(); model.showsFind.toggle() }.keyboardShortcut("f")
                 Button("閉じたタブを復元") { model.send(.restoreLatestArchive) }.keyboardShortcut("t", modifiers: [.command, .shift])
                 Button("アーカイブ") { model.showsArchive = true }
             }

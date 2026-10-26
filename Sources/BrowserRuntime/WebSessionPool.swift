@@ -27,6 +27,11 @@ public final class WebSessionPool {
         return session
     }
 
+    /// Hands the live session to a new owner (a detached window) without disposing it.
+    public func release(id: UUID) -> WebSession? {
+        sessions.removeValue(forKey: id)
+    }
+
     public func remove(id: UUID) {
         sessions.removeValue(forKey: id)?.dispose()
     }
