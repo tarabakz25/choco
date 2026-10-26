@@ -21,13 +21,16 @@ public final class WebSession: NSObject {
     @ObservationIgnored public var onPageChange: ((URL?, String) -> Void)?
     @ObservationIgnored public var onOpenWindow: ((WKWebViewConfiguration, URL?) -> WKWebView?)?
     @ObservationIgnored public var onClose: (() -> Void)?
+    /// Fires after any observed page state (URL, title, loading, history) changed.
+    @ObservationIgnored public var onStateChange: ((WebSession) -> Void)?
     @ObservationIgnored private var observations: [NSKeyValueObservation] = []
     @ObservationIgnored private var downloads: [ObjectIdentifier: DownloadTransfer] = [:]
     @ObservationIgnored private var isDisposed = false
     @ObservationIgnored private var lastReportedURL: URL?
     @ObservationIgnored private var lastReportedTitle = ""
 
-    public init(id: UUID, profileID: UUID, initialURL: URL? = nil, configuration: WKWebViewConfiguration? = nil) {
+    public init(id: UUID, profileID: UUID, initialURL: URL? = nil, configuration: WKWebViewConfiguration? = nil,
+                extensionController: WKWebExtensionController? = nil) {
         self.id = id
         self.profileID = profileID
         let hasInvalidProfileIdentifier = profileID.uuidString == "00000000-0000-0000-0000-000000000000"
@@ -36,6 +39,7 @@ public final class WebSession: NSObject {
             // WebKit raises an Objective-C exception for the zero UUID. A
             // corrupt profile must never crash the app or use another profile.
             configuration.websiteDataStore = hasInvalidProfileIdentifier ? .nonPersistent() : WKWebsiteDataStore(forIdentifier: profileID)
+            configuration.webExtensionController = extensionController
             return configuration
         }()
         self.webView = WKWebView(frame: .zero, configuration: configuration)
@@ -98,6 +102,7 @@ public final class WebSession: NSObject {
         onPageChange = nil
         onOpenWindow = nil
         onClose = nil
+        onStateChange = nil
     }
 
     private func observeWebView() {
@@ -128,6 +133,7 @@ public final class WebSession: NSObject {
             lastReportedTitle = title
             onPageChange?(url, title)
         }
+        onStateChange?(self)
     }
 
     private static func isWebNavigation(_ url: URL) -> Bool {

@@ -20,6 +20,7 @@ OSS_ARC_WEBKIT_TESTS=1 ./scripts/test.sh                       # also run tests 
 
 - `swift build` alone produces only a bare executable. The `.app` bundle (Info.plist, resource bundle `choco-browser_BrowserApp.bundle`, entitlements, codesign) is assembled only by `build-app.sh`, so use it to actually launch the app.
 - UI tests (`Tests/BrowserUITests`) are **not** in `Package.swift`; they only exist in `choco-browser.xcodeproj` (scheme `choco-browser`) and run through `xcodebuild`. The Xcode project uses synchronized folders over the same `Sources/` tree, so new Swift files are picked up by both SwiftPM and Xcode automatically.
+- UI tests are slow: don't run `test-ui.sh` / `task test:ui` as part of routine verification. Use `./scripts/test.sh` instead, and run the UI tests only when explicitly asked.
 - No linter or formatter is configured.
 
 ## Architecture

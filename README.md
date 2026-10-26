@@ -1,4 +1,4 @@
-# choco
+# choco-browser
 
 SwiftUIとWebKitで作る、Arcの整理・操作体験を目指したmacOS用OSSブラウザです。MITライセンス。Arc / The Browser Companyとは独立したプロジェクトです。
 
@@ -10,12 +10,12 @@ SwiftUIとWebKitで作る、Arcの整理・操作体験を目指したmacOS用OS
 
 ```sh
 git clone https://github.com/tarabakz25/choco.git
-cd choco
+cd choco-browser
 ./scripts/build-app.sh
-open build/choco.app
+open build/choco-browser.app
 ```
 
-`Choco.xcodeproj`をXcodeで開き、`Choco` schemeを実行することもできます。スクリプトのビルドはローカル用のアドホック署名です。公開配布用の署名・公証・自動更新は含みません。
+`choco-browser.xcodeproj`をXcodeで開き、`choco-browser` schemeを実行することもできます。スクリプトのビルドはローカル用のアドホック署名です。公開配布用の署名・公証・自動更新は含みません。
 
 ```sh
 ./scripts/test.sh
@@ -30,8 +30,9 @@ open build/choco.app
 - URL入力・検索・既存タブ切替・操作コマンドをまとめたコマンドバー
 - 同じSpaceの2タブを表示するSplit
 - 手動Archiveと復元、起動時の構成復元
+- Chrome拡張機能（WebKitのWeb拡張API。Manifest V2 / V3）の追加・無効化・削除
 
-α版は単一メインウィンドウです。複数ウィンドウ、プライベート閲覧、自動Archive、Arcからのインポート、AI、同期、Boosts、拡張機能などは後続段階です。全機能の対応表は[開発要件](docs/requirements.md)にあります。
+α版は単一メインウィンドウです。複数ウィンドウ、プライベート閲覧、自動Archive、Arcからのインポート、AI、同期、Boostsなどは後続段階です。全機能の対応表は[開発要件](docs/requirements.md)にあります。
 
 ## 主な操作
 
@@ -50,7 +51,13 @@ Space・Profileの作成は左下のメニューから、タブとフォルダ�
 
 [指定デザイン](https://www.figma.com/design/ZF9ydApZS6Ln3SRZFO2dWk?node-id=14-1052)に合わせ、サイドバー・コマンドバー・サイト操作・Archiveを改修しています。Archiveは左下のLibraryから、SplitはURL欄右端のサイト操作から開きます。[対応範囲と構成](docs/figma-ui.md)に詳細があります。
 
-設定の「アニメーション」から、choco内の動きをシステムに従わせるか、有効にするか、減らすか選択できます。
+設定の「アニメーション」から、choco-browser内の動きをシステムに従わせるか、有効にするか、減らすか選択できます。
+
+## Chrome拡張機能
+
+設定の「Extensions」から、拡張機能のフォルダ（`manifest.json`があるもの）、ZIP、CRXを追加できます。ChromeウェブストアのURLまたは拡張機能IDを入力すると、ストアからCRXを取得して追加します（CRXの署名は検証しません）。追加時に要求される権限を確認し、許可すると全Profileで有効になります。拡張機能のボタンはサイトの操作パネルの「拡張機能」に並び、クリックするとポップアップまたは拡張機能の処理が実行されます。
+
+Profileごとに別のWebKit拡張コントローラを使い、拡張機能はそのProfileのCookieを参照します。拡張機能本体は`Application Support/OssArc/Extensions`に保存します。WebKitが未対応のChrome API、拡張機能のキーボードショートカット、コンテキストメニュー項目、ツールバー固定表示、プライベート閲覧、別ウィンドウへ切り出したタブでの拡張機能の操作は未対応です。
 
 ## データとプライバシー
 
@@ -58,7 +65,7 @@ Space・Profileの作成は左下のメニューから、タブとフォルダ�
 
 アプリ独自のアカウント登録、同期、AI送信、利用状況収集、外部検索候補の取得はありません。明示したWeb検索はGoogleに送られます。Webサイトへの通常の通信はWebKitが行います。
 
-起動復元はURL・配置・名前などの復元です。フォームの入力内容、ページのJavaScript状態、完全な戻る履歴の保存は保証しません。任意サイトのパスキー・Safariの保存パスワード・DRMサービス・Chrome拡張との互換性はα版の保証対象ではありません。
+起動復元はURL・配置・名前などの復元です。フォームの入力内容、ページのJavaScript状態、完全な戻る履歴の保存は保証しません。任意サイトのパスキー・Safariの保存パスワード・DRMサービスはα版の保証対象ではありません。Chrome拡張はWebKitが対応するAPIの範囲で動作します（下記）。
 
 ## 開発資料
 
@@ -80,4 +87,4 @@ UIテストはローカルの`127.0.0.1:8765`にテスト専用ページを起�
 
 ## 名前と互換性
 
-公開名は暫定的に`choco`です。初期α版のデータを引き続き使えるよう、内部のbundle identifier（`org.ossarc.browser`）、保存先（`OssArc`）、テスト用環境変数（`OSS_ARC_WEBKIT_TESTS`）は維持しています。
+公開名は暫定的に`choco-browser`です。初期α版のデータを引き続き使えるよう、内部のbundle identifier（`org.ossarc.browser`）、保存先（`OssArc`）、テスト用環境変数（`OSS_ARC_WEBKIT_TESTS`）は維持しています。

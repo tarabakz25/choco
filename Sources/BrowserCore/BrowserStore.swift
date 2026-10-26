@@ -8,8 +8,12 @@ import Observation
     @ObservationIgnored private let recoveryDiagnostic: String?
     @ObservationIgnored private var revision: UInt64 = 0
 
+    public static var defaultDirectory: URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("OssArc", isDirectory: true)
+    }
+
     public init(directory: URL? = nil) {
-        let directory = directory ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("OssArc", isDirectory: true)
+        let directory = directory ?? Self.defaultDirectory
         let loaded = StatePersistence.load(directory: directory)
         state = loaded.state
         persistenceError = loaded.diagnostic

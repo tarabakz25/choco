@@ -68,7 +68,7 @@ URLとレイアウトは復元するが、DOM、入力中フォーム、JavaScri
 macOS 15.4以上でSwiftUIのシェルとNSViewRepresentable経由のWKWebViewを使う。macOS 26以上に限られるSwiftUI WebViewには依存しない。
 
 - 永続Profile: [WebKitのProfile API](https://webkit.org/blog/14423/building-profiles-with-new-webkit-api/)
-- 将来のWeb拡張: [WebKit 18.4の公開API](https://webkit.org/blog/16574/webkit-features-in-safari-18-4/)。Storeや全Chrome APIの互換性とは別要件。
+- Web拡張: [WebKit 18.4の公開API](https://webkit.org/blog/16574/webkit-features-in-safari-18-4/)。`BrowserRuntime/Extensions`がインストール（フォルダ・ZIP・CRX・Chromeウェブストア）、保存、Profileごとの`WKWebExtensionController`を持つ。`BrowserApp/Features/Extensions`がタブ・ウィンドウの橋渡しとポップアップ・オプションページ・権限確認を担う。全Chrome APIの互換性は保証しない。
 - 開発者向け検査: [Safari Web Inspector](https://developer.apple.com/documentation/safari-developer-tools/enabling-inspecting-content-in-your-apps)。非公開APIによるアプリ内Inspector起動は行わない。
 - 一般サイトのパスキー: [ブラウザ向けentitlement](https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.developer.web-browser.public-key-credential)などの条件を後続段階で評価する。
 
