@@ -1,0 +1,78 @@
+@import 'tailwindcss';
+
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/Inter.ttf') format('truetype');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@theme {
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic',
+    system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* アプリの ChocoTheme と同じ値 */
+  --color-ink: #1e1e1f;
+  --color-ink-2: #26282b;
+  --color-card: #232528;
+  --color-line: #2f3134;
+  --color-sidebar: #5e5c5c;
+  --color-page: #f4f4f5;
+  --color-fg: #ededed;
+  --color-fg-2: #b9b8b8;
+  --color-fg-3: #8f8e8e;
+  --color-choco: #a553a7;
+  --color-choco-light: #c77dca;
+  --color-choco-hover: #b55fc8;
+
+  --animate-float: float 8s ease-in-out infinite;
+  @keyframes float {
+    0%, 100% { transform: translate3d(0, 0, 0); }
+    50% { transform: translate3d(0, -14px, 0); }
+  }
+}
+
+html { scroll-behavior: smooth; scroll-padding-top: 5rem; }
+
+body {
+  background: var(--color-ink);
+  color: var(--color-fg);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: color-mix(in srgb, var(--color-choco) 55%, transparent); }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .animate-float { animation: none; }
+}
+
+/* スクロール表示。JS が無い環境では常に表示する */
+.js .reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1), transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+.js .reveal.is-in { opacity: 1; transform: none; }
+
+/* Mac 以外で開いたときだけ表示する案内 */
+.mac-only-note { display: none; }
+.not-mac .mac-only-note { display: block; }
+
+kbd {
+  font-family: var(--font-sans);
+  display: inline-grid;
+  min-width: 2rem;
+  place-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgb(255 255 255 / 0.14);
+  border-bottom-width: 2px;
+  background: rgb(255 255 255 / 0.06);
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-fg);
+}

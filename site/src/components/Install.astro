@@ -1,0 +1,79 @@
+---
+import type { Locale } from '../i18n';
+import { dictionaries } from '../i18n';
+import { INSTALL_COMMAND, RELEASES_URL } from '../config';
+import { url } from '../utils';
+
+interface Props { locale: Locale }
+const { locale } = Astro.props;
+const t = dictionaries[locale].install;
+const code = 'rounded-xl border border-white/10 bg-black/40 px-4 py-3 font-mono text-[13px] leading-relaxed text-fg whitespace-pre-wrap break-all';
+---
+<section id="install" class="relative border-t border-white/[0.06] py-24 md:py-32">
+  <div class="mx-auto w-[min(1120px,100%-2rem)]">
+    <div class="reveal max-w-2xl">
+      <h2 class="text-3xl font-bold tracking-tight md:text-5xl">{t.title}</h2>
+      <p class="mt-4 text-lg leading-relaxed text-fg-2">{t.sub}</p>
+    </div>
+
+    <dl class="reveal mt-8 flex flex-wrap gap-2 text-sm">
+      {t.req.map((r) => (
+        <div class="flex gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 py-1.5">
+          <dt class="text-fg-3">{r.k}</dt><dd class="text-fg">{r.v}</dd>
+        </div>
+      ))}
+    </dl>
+
+    <div class="mt-10 grid gap-5 lg:grid-cols-5">
+      <!-- ターミナル -->
+      <div class="reveal rounded-3xl border border-choco/40 bg-gradient-to-b from-choco/[0.12] to-transparent p-6 lg:col-span-3 md:p-8">
+        <h3 class="text-xl font-semibold tracking-tight">{t.terminalTitle}</h3>
+        <p class="mt-2 text-[15px] leading-relaxed text-fg-2">{t.terminalBody}</p>
+        <div class="mt-5 flex items-stretch gap-2 rounded-2xl border border-white/10 bg-black/50 p-2 pl-4">
+          <code class="flex min-w-0 flex-1 items-center py-2 font-mono text-[13px] leading-relaxed text-fg md:text-sm"><span class="mr-3 select-none text-choco-light">$</span><span class="break-words">{INSTALL_COMMAND}</span></code>
+          <button
+            type="button"
+            data-copy={INSTALL_COMMAND}
+            data-copied={t.copied}
+            data-state="idle"
+            class="shrink-0 rounded-xl bg-white/10 px-4 text-sm font-semibold text-fg transition hover:bg-white/20 data-[state=copied]:bg-[#3fb68b]/30 data-[state=copied]:text-[#9be8c9]"
+          ><span data-copy-label>{t.copy}</span></button>
+        </div>
+        <ul class="mt-6 grid gap-2.5 text-[15px] text-fg-2 sm:grid-cols-2">
+          {t.terminalSteps.map((step) => (
+            <li class="flex items-center gap-2.5">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3fb68b" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="shrink-0"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+              {step}
+            </li>
+          ))}
+        </ul>
+        <a href={url('install.sh')} class="mt-6 inline-block text-sm text-choco-light underline-offset-4 hover:underline">{t.script} →</a>
+      </div>
+
+      <!-- 手動 -->
+      <div class="reveal rounded-3xl border border-white/10 bg-white/[0.03] p-6 lg:col-span-2 md:p-8" style="--reveal-delay:100ms">
+        <h3 class="text-xl font-semibold tracking-tight">{t.manualTitle}</h3>
+        <ol class="mt-5 grid gap-5">
+          {t.steps.map((s, i) => (
+            <li class="relative pl-11">
+              <span class="absolute left-0 top-0 grid size-8 place-items-center rounded-full bg-choco text-sm font-bold text-white">{i + 1}</span>
+              <b class="block text-[15px]">{s.title}</b>
+              <span class="mt-1 block text-sm leading-relaxed text-fg-2">{s.body}</span>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </div>
+
+    <div class="mt-5 grid gap-5 md:grid-cols-2">
+      <div class="reveal rounded-3xl border border-white/10 bg-white/[0.02] p-6">
+        <p class="mb-3 text-sm leading-relaxed text-fg-2">{t.xattrNote}</p>
+        <pre class={code}><code>xattr -dr com.apple.quarantine /Applications/choco-browser.app</code></pre>
+      </div>
+      <div class="reveal rounded-3xl border border-white/10 bg-white/[0.02] p-6" style="--reveal-delay:100ms">
+        <p class="mb-3 text-sm leading-relaxed text-fg-2">{t.verifyNote} <a class="text-choco-light underline-offset-4 hover:underline" href={RELEASES_URL}>{t.releasePage} →</a></p>
+        <pre class={code}><code>shasum -a 256 -c choco-browser.dmg.sha256</code></pre>
+      </div>
+    </div>
+  </div>
+</section>
