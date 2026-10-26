@@ -39,6 +39,7 @@ public final class WebSession: NSObject {
         let hasInvalidProfileIdentifier = profileID.uuidString == "00000000-0000-0000-0000-000000000000"
         let configuration = configuration ?? {
             let configuration = WKWebViewConfiguration()
+            configuration.applyBrowserIdentity()
             // WebKit raises an Objective-C exception for the zero UUID. A
             // corrupt profile must never crash the app or use another profile.
             configuration.websiteDataStore = hasInvalidProfileIdentifier ? .nonPersistent() : WKWebsiteDataStore(forIdentifier: profileID)
