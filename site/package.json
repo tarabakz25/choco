@@ -1,0 +1,33 @@
+{
+  "name": "choco-browser-site",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "remotion": "remotion studio remotion/index.ts",
+    "og": "remotion still remotion/index.ts og public/og.png"
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.9.12",
+    "@astrojs/react": "^7.1.1",
+    "@remotion/cli": "4.0.539",
+    "@remotion/player": "4.0.539",
+    "@tailwindcss/vite": "^4.3.3",
+    "astro": "^7.4.2",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "remotion": "4.0.539",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0"
+  },
+  "engines": {
+    "node": ">=22.23.4"
+  }
+}
