@@ -1,4 +1,5 @@
 import Foundation
+import BrowserLocalization
 import Observation
 
 @MainActor @Observable public final class BrowserStore {
@@ -224,7 +225,7 @@ import Observation
             try await writer.write(snapshot, revision: snapshotRevision)
             if snapshotRevision == revision { persistenceError = recoveryDiagnostic }
         } catch {
-            if snapshotRevision == revision { persistenceError = "変更を保存できませんでした。\(error.localizedDescription)" }
+            if snapshotRevision == revision { persistenceError = Localizer().format("Could not save changes. %@", error.localizedDescription) }
         }
     }
 }

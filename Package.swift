@@ -3,19 +3,28 @@ import PackageDescription
 
 let package = Package(
     name: "choco-browser",
+    defaultLocalization: "en",
     platforms: [.macOS("15.4")],
     products: [
+        .library(name: "BrowserLocalization", targets: ["BrowserLocalization"]),
         .library(name: "BrowserCore", targets: ["BrowserCore"]),
         .library(name: "BrowserRuntime", targets: ["BrowserRuntime"]),
         .executable(name: "choco-browser", targets: ["BrowserApp"])
     ],
     targets: [
-        .target(name: "BrowserCore"),
-        .target(name: "BrowserRuntime"),
-        .executableTarget(name: "BrowserApp", dependencies: ["BrowserCore", "BrowserRuntime"], resources: [.process("Resources")]),
+        .target(name: "BrowserLocalization", resources: [.process("Resources")]),
+        .target(name: "BrowserCore", dependencies: ["BrowserLocalization"]),
+        .target(name: "BrowserRuntime", dependencies: ["BrowserLocalization"]),
+        .executableTarget(name: "BrowserApp", dependencies: ["BrowserCore", "BrowserRuntime", "BrowserLocalization"], resources: [.process("Resources")]),
+        .testTarget(name: "BrowserLocalizationTests", dependencies: ["BrowserLocalization"]),
         .testTarget(name: "BrowserCoreTests", dependencies: ["BrowserCore"]),
         .testTarget(name: "BrowserRuntimeTests", dependencies: ["BrowserRuntime"]),
         .testTarget(name: "BrowserAcceptanceTests", dependencies: ["BrowserCore", "BrowserRuntime"]),
-        .testTarget(name: "BrowserAppTests", dependencies: ["BrowserApp"])
+        .testTarget(name: "BrowserAppTests", dependencies: ["BrowserApp"]),
+        .testTarget(
+            name: "MemoryOptimizationTests",
+            dependencies: ["BrowserCore", "BrowserRuntime", "BrowserApp"],
+            linkerSettings: [.linkedFramework("JavaScriptCore")]
+        )
     ]
 )
