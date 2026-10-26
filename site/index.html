@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>choco-browser — Arcの整理体験を目指すmacOSブラウザ</title>
+<meta name="description" content="SwiftUIとWebKitで作る、縦タブとSpaceで整理するmacOS用オープンソースブラウザ。アカウント不要・テレメトリーなし。α版。">
+<meta name="theme-color" content="#1e1e1f">
+<link rel="icon" href="assets/icon.png">
+<link rel="alternate" hreflang="en" href="en/">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="./"><img src="assets/icon.png" alt="">choco-browser</a>
+    <nav class="nav" aria-label="メイン">
+      <a href="#features">機能</a>
+      <a href="#install">インストール</a>
+      <a href="#privacy">プライバシー</a>
+      <a href="https://github.com/tarabakz25/choco">GitHub</a>
+      <a class="lang" href="en/" hreflang="en">English</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <div class="hero">
+    <div class="wrap">
+      <div>
+        <img class="icon" src="assets/icon.png" alt="choco-browser のアイコン（仮）">
+        <div><span class="badge">α版 · macOS 15.4以降 · Apple Silicon</span></div>
+        <h1>タブを、気持ちよく整理する。</h1>
+        <p class="lead">choco-browser は、縦タブ・Space・Favorites で Web を整理する macOS 用ブラウザです。SwiftUI と WebKit で作った、オープンソース（MIT）のα版です。</p>
+        <div class="cta">
+          <a class="button" href="https://github.com/tarabakz25/choco/releases/latest/download/choco-browser.dmg">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5M4 20h16"/></svg>
+            macOS 版をダウンロード (.dmg)
+          </a>
+          <a class="button secondary" href="#install">インストール手順</a>
+        </div>
+        <p class="fine">最新版: <a href="https://github.com/tarabakz25/choco/releases/latest">リリースノートと過去のバージョン</a> · 現在は Apple の公証前のため、初回起動に追加の操作が必要です。</p>
+      </div>
+
+      <div class="mock" role="img" aria-label="choco-browser の画面イメージ（イラスト）">
+        <div class="side">
+          <div class="dots"><i></i><i></i><i></i></div>
+          <div class="favs"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="label">Pinned</div>
+          <div class="tab folder">▸ 調べもの</div>
+          <div class="tab">GitHub</div>
+          <div class="label">Today</div>
+          <div class="tab on">choco-browser</div>
+          <div class="tab">仕様メモ</div>
+          <div class="tab">天気</div>
+        </div>
+        <div class="main">
+          <div class="command">URL・検索・タブ・コマンド  ⌘L</div>
+          <div class="page">choco-browser</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section id="features">
+    <div class="wrap">
+      <h2>主な機能</h2>
+      <p class="sub">Arc の整理・操作体験を目指して、まず「日常のブラウジングが成り立つ」ところまで作りました。</p>
+      <div class="grid">
+        <div class="card"><h3>縦タブと Favorites</h3><p>Today と Pinned、最大12件の Favorites、階層フォルダでタブを整理します。</p></div>
+        <div class="card"><h3>Space と Profile</h3><p>Space ごとにアイコンと色を設定。Profile ごとに Cookie とログイン状態を分離できます。</p></div>
+        <div class="card"><h3>コマンドバー</h3><p>URL 入力、検索、既存タブへの切替、操作コマンドを1つの入力欄から。</p></div>
+        <div class="card"><h3>Split</h3><p>同じ Space の2つのタブを並べて表示します。</p></div>
+        <div class="card"><h3>Archive と復元</h3><p>閉じた Today タブは Archive に保存。起動時には前回の構成を復元します。</p></div>
+        <div class="card"><h3>Chrome 拡張機能</h3><p>WebKit の Web 拡張 API で Manifest V2 / V3 の拡張機能を追加できます。Chrome ウェブストアの ID や URL からも導入可能です。</p></div>
+      </div>
+      <p class="note">α版は単一ウィンドウです。複数ウィンドウ、プライベート閲覧、自動 Archive、Arc からのインポート、AI、同期、Boosts は未対応です。</p>
+
+      <h2 style="margin-top:56px">主な操作</h2>
+      <table>
+        <tbody>
+          <tr><td><kbd>⌘T</kbd></td><td>新しいタブ・検索・既存タブ候補</td></tr>
+          <tr><td><kbd>⌘L</kbd></td><td>現在ページの URL 入力</td></tr>
+          <tr><td><kbd>⌘W</kbd> / <kbd>⇧⌘T</kbd></td><td>Today を Archive / 閉じたタブを復元</td></tr>
+          <tr><td><kbd>⌃Tab</kbd> / <kbd>⌃⇧Tab</kbd></td><td>最近使った順にタブを切替</td></tr>
+          <tr><td><kbd>⌃⌥←</kbd> / <kbd>⌃⌥→</kbd></td><td>Space を切替</td></tr>
+          <tr><td><kbd>⌘F</kbd> / <kbd>⌘R</kbd> / <kbd>⌘S</kbd></td><td>ページ内検索 / 再読み込み / サイドバー切替</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="wrap">
+      <h2>インストール</h2>
+      <p class="sub">ダウンロードした DMG から Applications にコピーするだけです。</p>
+
+      <dl class="req" style="margin-bottom:28px">
+        <dt>対応 OS</dt><dd>macOS 15.4 以降</dd>
+        <dt>対応チップ</dt><dd>Apple Silicon（M1 以降）。Intel Mac は未対応です。</dd>
+        <dt>ライセンス</dt><dd>MIT</dd>
+      </dl>
+
+      <ol class="steps">
+        <li><b>DMG をダウンロードして開く</b><span>上の「macOS 版をダウンロード」から <code>choco-browser.dmg</code> を取得し、ダブルクリックで開きます。</span></li>
+        <li><b>Applications にドラッグ</b><span>開いたウィンドウの <code>choco-browser</code> を <code>Applications</code> フォルダへドラッグします。</span></li>
+        <li><b>初回起動: 「このまま開く」を許可</b><span>現在のα版は Apple の公証を受けていないため、初回は macOS にブロックされます。<br>Applications から <code>choco-browser</code> を開いて警告を閉じ、<b>システム設定 → プライバシーとセキュリティ</b> を開いて、下部に表示される <b>「このまま開く」</b> を押し、パスワードまたは Touch ID で認証します。次回以降は通常どおり起動できます。</span></li>
+      </ol>
+
+      <div class="note">
+        ターミナルを使う場合は、次のコマンドでも同じ結果になります。
+<pre><code>xattr -dr com.apple.quarantine /Applications/choco-browser.app</code></pre>
+      </div>
+      <div class="note">
+        ダウンロードの整合性を確認するには、<a href="https://github.com/tarabakz25/choco/releases/latest">リリースページ</a>の <code>choco-browser.dmg.sha256</code> を <code>choco-browser.dmg</code> と同じフォルダに置いて実行します。
+<pre><code>shasum -a 256 -c choco-browser.dmg.sha256</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <section id="privacy">
+    <div class="wrap">
+      <h2>プライバシー</h2>
+      <p class="sub">choco-browser 独自のアカウント登録、同期、AI への送信、利用状況の収集、外部検索候補の取得はありません。</p>
+      <div class="grid">
+        <div class="card"><h3>データは手元に</h3><p>タブ構成は Mac 内の Application Support に保存します。Cookie などは Profile ごとに WebKit のデータストアへ保存され、Profile 間でコピーされません。</p></div>
+        <div class="card"><h3>検索は明示したときだけ</h3><p>あなたが実行した Web 検索のみ Google に送られます。Web サイトへの通常の通信は WebKit が行います。</p></div>
+        <div class="card"><h3>オープンソース</h3><p>ソースコードは <a href="https://github.com/tarabakz25/choco">GitHub</a> で公開しています。MIT ライセンスです。</p></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>choco-browser はオープンソースのα版です。名称は暫定です。</p>
+    <p>Arc / The Browser Company とは独立したプロジェクトで、提携・承認関係はありません。</p>
+    <p>© 2026 choco-browser contributors · MIT License · フォント: Inter（<a href="assets/Inter-OFL.txt">SIL OFL 1.1</a>）</p>
+  </div>
+</footer>
+</body>
+</html>

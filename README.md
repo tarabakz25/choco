@@ -2,6 +2,10 @@
 
 SwiftUIとWebKitで作る、Arcの整理・操作体験を目指したmacOS用OSSブラウザです。MITライセンス。Arc / The Browser Companyとは独立したプロジェクトです。
 
+## ダウンロード
+
+[Releases](https://github.com/tarabakz25/choco/releases/latest)から`choco-browser.dmg`を取得し、`choco-browser`を`Applications`へドラッグしてください。macOS 15.4以降のApple Siliconに対応します。現在のα版は公証前のため、初回起動時は「システム設定 → プライバシーとセキュリティ → このまま開く」が必要です。配布DMGの作り方とリリース手順は[リリースと配布](docs/release.md)にあります。
+
 ## 開発環境・起動
 
 - macOS 15.4以上
@@ -15,7 +19,7 @@ cd choco-browser
 open build/choco-browser.app
 ```
 
-`choco-browser.xcodeproj`をXcodeで開き、`choco-browser` schemeを実行することもできます。スクリプトのビルドはローカル用のアドホック署名です。公開配布用の署名・公証・自動更新は含みません。
+`choco-browser.xcodeproj`をXcodeで開き、`choco-browser` schemeを実行することもできます。スクリプトのビルドは既定でアドホック署名です。Developer ID署名・公証は`DEVELOPER_ID_APP`と`NOTARY_PROFILE`を指定すると有効になります（[リリースと配布](docs/release.md)）。自動更新は含みません。
 
 ```sh
 ./scripts/test.sh
@@ -81,6 +85,7 @@ Webページの内容、ユーザーが付けた名前、既存のSpace・Profil
 - [構成とデータの扱い](docs/architecture.md)
 - [並列実装の操作契約](docs/implementation-contract.md)
 - [検証記録](docs/verification.md)
+- [リリースと配布](docs/release.md)
 
 ## 追加の受入テスト
 
