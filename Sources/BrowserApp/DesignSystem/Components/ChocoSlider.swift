@@ -25,6 +25,16 @@ enum ChocoSliderMetrics {
         let snapped = range.lowerBound + ((raw - range.lowerBound) / step).rounded() * step
         return min(max(snapped, range.lowerBound), range.upperBound)
     }
+
+    /// The value after one arrow-key press: one `step`, or a twentieth of the range without one.
+    /// `direction` is -1 to decrease and 1 to increase; the result stays inside `range`.
+    static func nudged(_ value: Double, direction: Int, in range: ClosedRange<Double>, step: Double?) -> Double {
+        let increment = step.flatMap { $0 > 0 ? $0 : nil } ?? (range.upperBound - range.lowerBound) / 20
+        let moved = min(max(value + Double(direction) * increment, range.lowerBound), range.upperBound)
+        guard let step, step > 0 else { return moved }
+        let snapped = range.lowerBound + ((moved - range.lowerBound) / step).rounded() * step
+        return min(max(snapped, range.lowerBound), range.upperBound)
+    }
 }
 
 /// `ChocoSlider(value: $opacity, in: 0...1)`. Width follows the parent (288pt in Figma).
@@ -61,7 +71,19 @@ struct ChocoSlider: View {
         .frame(height: 20)
         .opacity(isEnabled ? 1 : ChocoTheme.disabledOpacity)
         .allowsHitTesting(isEnabled)
-        // The drag surface is invisible to assistive technology, so expose a native slider instead.
+        // Keyboard: focus with Tab (Full Keyboard Access) and adjust with the arrow keys, like a native slider.
+        .focusable(isEnabled)
+        .onKeyPress(phases: [.down, .repeat]) { press in
+            let direction: Int
+            switch press.key {
+            case .leftArrow, .downArrow: direction = -1
+            case .rightArrow, .upArrow: direction = 1
+            default: return .ignored
+            }
+            value = ChocoSliderMetrics.nudged(value, direction: direction, in: range, step: step)
+            return .handled
+        }
+        // The drag surface is invisible to VoiceOver, so expose a native slider to it.
         .accessibilityRepresentation {
             if let step { Slider(value: $value, in: range, step: step) } else { Slider(value: $value, in: range) }
         }
