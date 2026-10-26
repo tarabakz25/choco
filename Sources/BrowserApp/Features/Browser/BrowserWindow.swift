@@ -236,7 +236,6 @@ struct BrowserWindow: View {
             .offset(x: sidebarPresented ? (floatingSidebar ? 6 : 0) : -sidebarWidth, y: floatingSidebar ? 6 : 0)
             .animation(sidebarAnimation, value: sidebarPose)
             .allowsHitTesting(sidebarPresented && !modalPresented)
-            .accessibilityHidden(!sidebarPresented || modalPresented)
             .onHover { hovering in
                 // The chrome is always mounted, so its actual pointer state survives
                 // peek-to-pin instead of being reset by a second view's creation.
@@ -246,6 +245,8 @@ struct BrowserWindow: View {
             }
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier(model.state.sidebarVisible ? "sidebar-docked" : "sidebar-peek")
+            // Hide after wrapping, so a dismissed sidebar leaves no empty labelled container behind.
+            .accessibilityHidden(!sidebarPresented || modalPresented)
     }
 
     private var hiddenSidebarControls: some View {
@@ -264,6 +265,9 @@ struct BrowserWindow: View {
                 if commandPresented {
                     Color.black.opacity(0.001).ignoresSafeArea()
                         .contentShape(Rectangle()).onTapGesture { model.commandMode = nil }
+                        // A tappable backdrop would otherwise merge the whole layer into one accessibility
+                        // container, stretching the palette's frame to the window.
+                        .accessibilityHidden(true)
                         .transition(.opacity)
                     CommandPalette(model: model)
                         .frame(width: min(668, geometry.size.width - 2 * ChocoSpace.xl))
@@ -289,10 +293,21 @@ struct BrowserWindow: View {
         peekDismissTask?.cancel()
         guard sidebarPeek && !sidebarHovered && !edgeHovered && !model.showsSiteControls && !model.showsNewMenu && model.editor == nil else { return }
         peekDismissTask = Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(220))
-            guard !Task.isCancelled && !sidebarHovered && !edgeHovered && !model.showsSiteControls && !model.showsNewMenu && model.editor == nil else { return }
-            sidebarPeek = false
+            while true {
+                try? await Task.sleep(for: .milliseconds(220))
+                guard !Task.isCancelled && !sidebarHovered && !edgeHovered && !model.showsSiteControls && !model.showsNewMenu && model.editor == nil else { return }
+                // A fast pointer jump from the reveal edge into the sidebar can skip its hover-enter event,
+                // so trust the real pointer position before dismissing.
+                guard pointerIsOverSidebar else { sidebarPeek = false; return }
+            }
         }
+    }
+
+    private var pointerIsOverSidebar: Bool {
+        guard let window = model.browserWindow, let content = window.contentView else { return false }
+        let point = window.mouseLocationOutsideOfEventStream
+        // The floating sidebar is inset 6pt and drawn at `sidebarWidth`.
+        return content.bounds.contains(point) && point.x <= sidebarWidth + 6
     }
 
     private func configureWindow(_ window: NSWindow) {
@@ -313,7 +328,14 @@ struct BrowserWindow: View {
             Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
             TextField("ページ内を検索", text: $model.findText)
                 .accessibilityIdentifier("find-input")
-                .focused($findFocused).onAppear { findFocused = true }
+                .focused($findFocused)
+                .task {
+                    // Menu key equivalents restore the previous responder after onAppear (see the command bar).
+                    await Task.yield()
+                    do { try await Task.sleep(for: .milliseconds(30)) } catch { return }
+                    guard model.showsFind, !Task.isCancelled else { return }
+                    findFocused = true
+                }
                 .textFieldStyle(.plain).onSubmit { model.activeSession?.find(model.findText) }
                 .onChange(of: model.findText) { _, value in model.activeSession?.find(value) }
             Button { model.activeSession?.find(model.findText, backwards: true) } label: { Image(systemName: "chevron.up") }
