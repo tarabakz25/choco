@@ -15,7 +15,7 @@ import SwiftUI
     }
 
     var body: some Scene {
-        Window("choco", id: "browser") {
+        Window("choco-browser", id: "browser") {
             BrowserWindow(model: model)
                 .modifier(AppMotionPreference())
                 .preferredColorScheme(appearance == "dark" ? .dark : appearance == "light" ? .light : nil)

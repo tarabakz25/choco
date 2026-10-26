@@ -14,7 +14,7 @@
 - サイドバー非表示／ホバー表示（22:2812、22:3001）: 8pt(`ChocoSpace.sm`)のコンテンツ余白、左端での一時表示、表示ボタンと⌘Sで固定表示へ戻る。
 - 設定ポップアップ（105:16398、105:16494、105:16716、105:16865）: 684×650ptの独立ウィンドウ。General / Profiles / Shortcuts / Advancedの4タブ、暗いツールバーと紫の選択色を再現。⌘,とサイドバーの設定メニューから開く。
 
-ユーザー確認により、新しいMedia、Easel、Boost、拡張機能などの開発は含めない。Libraryの対象外項目は無効状態にし、サンプルの個人タブ名・履歴・インストール済み拡張・更新通知を実データとして表示しない。バージョン表示は実際のchocoの値を使用する。
+ユーザー確認により、新しいMedia、Easel、Boost、拡張機能などの開発は含めない。Libraryの対象外項目は無効状態にし、サンプルの個人タブ名・履歴・インストール済み拡張・更新通知を実データとして表示しない。バージョン表示は実際のchoco-browserの値を使用する。
 
 ## アニメーション設定
 
@@ -38,7 +38,7 @@
 
 InterとNoto Sans JPをプロセス内だけで登録する。フォント・アイコンはアプリに同梱し、期限付きFigma URLへの実行時アクセスは行わない。ライセンス・出典は[THIRD_PARTY.md](../THIRD_PARTY.md)を参照。
 
-SwiftPMのResource bundleは`Contents/Resources/Choco_BrowserApp.bundle`へコピーする。Xcodeアプリは同じResourceファイルをメインbundleへ格納する。WebKit・Profileデータ・保存形式は変更しない。
+SwiftPMのResource bundleは`Contents/Resources/choco-browser_BrowserApp.bundle`へコピーする。Xcodeアプリは同じResourceファイルをメインbundleへ格納する。WebKit・Profileデータ・保存形式は変更しない。
 
 ## 操作と互換性
 

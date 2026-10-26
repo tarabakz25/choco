@@ -2,12 +2,12 @@
 import PackageDescription
 
 let package = Package(
-    name: "Choco",
+    name: "choco-browser",
     platforms: [.macOS("15.4")],
     products: [
         .library(name: "BrowserCore", targets: ["BrowserCore"]),
         .library(name: "BrowserRuntime", targets: ["BrowserRuntime"]),
-        .executable(name: "Choco", targets: ["BrowserApp"])
+        .executable(name: "choco-browser", targets: ["BrowserApp"])
     ],
     targets: [
         .target(name: "BrowserCore"),

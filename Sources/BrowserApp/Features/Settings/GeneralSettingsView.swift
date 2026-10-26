@@ -8,7 +8,7 @@ struct GeneralSettingsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
             SettingsGroup {
-                SettingsUnavailableToggle("Automatically update choco", info: true)
+                SettingsUnavailableToggle("Automatically update choco-browser", info: true)
                 SettingsUnavailableToggle("Warn before quitting", divider: false)
             }
             SettingsGroup {

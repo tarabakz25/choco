@@ -78,7 +78,7 @@ import XCTest
         capture(shortcuts, name: "settings-shortcuts")
 
         let advanced = selectPage("Advanced")
-        XCTAssertTrue(advanced.staticTexts["Play choco sound effects"].exists)
+        XCTAssertTrue(advanced.staticTexts["Play choco-browser sound effects"].exists)
         capture(advanced, name: "settings-advanced")
         app.typeKey("w", modifierFlags: .command)
         let closed = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: advanced)

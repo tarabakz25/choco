@@ -12,6 +12,6 @@ for attempt in {1..40}; do
     sleep 0.1
 done
 if [ "$ready" != 1 ]; then echo 'Fixture server did not start' >&2; exit 1; fi
-xcodebuild -project Choco.xcodeproj -scheme Choco -configuration Debug \
+xcodebuild -project choco-browser.xcodeproj -scheme choco-browser -configuration Debug \
     -destination 'platform=macOS' -derivedDataPath .build/xcode \
     -clonedSourcePackagesDirPath .build/SourcePackages test "$@"
