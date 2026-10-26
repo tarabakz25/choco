@@ -21,6 +21,8 @@ struct WebSessionPoolTests {
         #expect(replacement !== first)
         #expect(replacement.profileID == otherProfile)
         #expect(replacement.webView.configuration.websiteDataStore.identifier == otherProfile)
+        let sibling = pool.session(id: UUID(), profileID: otherProfile)
+        #expect(sibling.webView.configuration.websiteDataStore === replacement.webView.configuration.websiteDataStore)
         #expect(first.webView.navigationDelegate == nil)
         #expect(first.webView.uiDelegate == nil)
         pool.retainOnly([])
