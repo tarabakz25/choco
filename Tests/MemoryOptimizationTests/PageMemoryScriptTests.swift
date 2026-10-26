@@ -20,7 +20,7 @@ struct PageMemoryScriptTests {
     }
 
     @Test func missingWindowScrollFallsBackToTheDocument() throws {
-        let probe = try probe(omitScrollX: true, scrollY: "3", scrollLeft: "15", scrollTop: "4")
+        let probe = try probe(scrollY: "3", omitScrollX: true, scrollLeft: "15", scrollTop: "4")
         #expect(probe.scrollX == 15)
         #expect(probe.scrollY == 3)
     }

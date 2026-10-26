@@ -5,6 +5,10 @@ import Testing
 
 @Suite("Memory optimization policy")
 struct HibernationPolicyTests {
+    enum HibernationProtection: String, CaseIterable, Sendable {
+        case pinned, audio, downloading, form, visible
+    }
+
     @Test func standardBudgetKeepsASmallWorkingSet() {
         #expect(HibernationBudget.standard.idleInterval == 5 * 60)
         #expect(HibernationBudget.standard.maxLiveWebViews == 6)
@@ -273,10 +277,6 @@ struct HibernationPolicyTests {
         #expect(recreated !== first)
         #expect(recreated.name == "d")
     }
-}
-
-private enum HibernationProtection: String, CaseIterable, Sendable {
-    case pinned, audio, downloading, form, visible
 }
 
 private func snapshot(
