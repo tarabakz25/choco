@@ -9,8 +9,12 @@ import Observation
     @ObservationIgnored private let recoveryDiagnostic: String?
     @ObservationIgnored private var revision: UInt64 = 0
 
+    public static var defaultDirectory: URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("OssArc", isDirectory: true)
+    }
+
     public init(directory: URL? = nil) {
-        let directory = directory ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("OssArc", isDirectory: true)
+        let directory = directory ?? Self.defaultDirectory
         let loaded = StatePersistence.load(directory: directory)
         state = loaded.state
         persistenceError = loaded.diagnostic
@@ -34,6 +38,10 @@ import Observation
             state.selectedFavoriteID = id; state.selectedTabID = nil; state.split = nil
         case .closeTab(let id): close(id, explicitlyDelete: false)
         case .deleteTab(let id): close(id, explicitlyDelete: true)
+        case .detachTab(let id): close(id, explicitlyDelete: true, archives: false)
+        case .archiveTab(let tab):
+            guard state.spaces.contains(where: { $0.id == tab.spaceID }), !state.tabs.contains(where: { $0.id == tab.id }) else { return }
+            state.archive.insert(ArchiveEntry(tab: tab), at: 0)
         case .restoreLatestArchive:
             if let id = state.archive.first?.id { restore(id) }
         case .restoreArchive(let id): restore(id)
@@ -120,6 +128,10 @@ import Observation
         case .createFavorite(let title, let url):
             guard state.favorites.count < 12, !trimmed(url).isEmpty else { return }
             state.favorites.append(BrowserFavorite(title: nonempty(title, fallback: url), url: trimmed(url)))
+        case .insertFavorite(let title, let url, let index):
+            guard state.favorites.count < 12, !trimmed(url).isEmpty else { return }
+            state.favorites.insert(BrowserFavorite(title: nonempty(title, fallback: url), url: trimmed(url)),
+                                   at: min(max(0, index), state.favorites.count))
         case .updateFavorite(let id, let title, let url):
             guard !trimmed(url).isEmpty, let index = state.favorites.firstIndex(where: { $0.id == id }) else { return }
             state.favorites[index].title = nonempty(title, fallback: url); state.favorites[index].url = trimmed(url)
@@ -181,13 +193,13 @@ import Observation
         if state.selectedTabID == id { state.selectedTabID = other }
     }
 
-    private func close(_ id: UUID, explicitlyDelete: Bool) {
+    private func close(_ id: UUID, explicitlyDelete: Bool, archives: Bool = true) {
         guard let index = state.tabs.firstIndex(where: { $0.id == id }) else { return }
         let tab = state.tabs[index]
         collapseSplit(containing: id)
         if !tab.isPinned || explicitlyDelete {
             state.tabs.remove(at: index)
-            state.archive.insert(ArchiveEntry(tab: tab), at: 0)
+            if archives { state.archive.insert(ArchiveEntry(tab: tab), at: 0) }
         }
         if state.selectedTabID == id {
             state.selectedTabID = state.tabs.first(where: { $0.spaceID == state.selectedSpaceID && $0.id != id })?.id

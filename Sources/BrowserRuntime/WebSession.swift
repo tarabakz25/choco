@@ -23,6 +23,8 @@ public final class WebSession: NSObject {
     @ObservationIgnored public var onPageChange: ((URL?, String) -> Void)?
     @ObservationIgnored public var onOpenWindow: ((WKWebViewConfiguration, URL?) -> WKWebView?)?
     @ObservationIgnored public var onClose: (() -> Void)?
+    /// Fires after any observed page state (URL, title, loading, history) changed.
+    @ObservationIgnored public var onStateChange: ((WebSession) -> Void)?
     @ObservationIgnored private var observations: [NSKeyValueObservation] = []
     @ObservationIgnored private var downloads: [ObjectIdentifier: DownloadTransfer] = [:]
     @ObservationIgnored private var isDisposed = false
@@ -30,7 +32,8 @@ public final class WebSession: NSObject {
     @ObservationIgnored private var lastReportedTitle = ""
     @ObservationIgnored private var pendingScroll: PageScrollOffset?
 
-    public init(id: UUID, profileID: UUID, initialURL: URL? = nil, restoreScroll: PageScrollOffset? = nil, configuration: WKWebViewConfiguration? = nil) {
+    public init(id: UUID, profileID: UUID, initialURL: URL? = nil, restoreScroll: PageScrollOffset? = nil, configuration: WKWebViewConfiguration? = nil,
+                extensionController: WKWebExtensionController? = nil) {
         self.id = id
         self.profileID = profileID
         let hasInvalidProfileIdentifier = profileID.uuidString == "00000000-0000-0000-0000-000000000000"
@@ -41,6 +44,7 @@ public final class WebSession: NSObject {
             configuration.websiteDataStore = hasInvalidProfileIdentifier ? .nonPersistent() : WKWebsiteDataStore(forIdentifier: profileID)
             return configuration
         }()
+        if let extensionController { configuration.webExtensionController = extensionController }
         self.webView = WKWebView(frame: .zero, configuration: configuration)
         super.init()
         webView.navigationDelegate = self
@@ -71,7 +75,7 @@ public final class WebSession: NSObject {
         }
     }
 
-    private func navigate(to url: URL, restoreScroll: PageScrollOffset?) {
+    public func navigate(to url: URL, restoreScroll: PageScrollOffset?) {
         guard !isDisposed else { return }
         guard Self.isWebNavigation(url) else {
             pendingScroll = nil
@@ -119,6 +123,7 @@ public final class WebSession: NSObject {
         onPageChange = nil
         onOpenWindow = nil
         onClose = nil
+        onStateChange = nil
     }
 
     private func observeWebView() {
@@ -149,6 +154,7 @@ public final class WebSession: NSObject {
             lastReportedTitle = title
             onPageChange?(url, title)
         }
+        onStateChange?(self)
     }
 
     private static func isWebNavigation(_ url: URL) -> Bool {

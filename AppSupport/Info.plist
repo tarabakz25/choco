@@ -3,11 +3,11 @@
 <plist version="1.0"><dict>
 <key>CFBundleDevelopmentRegion</key><string>ja</string>
 <key>CFBundleLocalizations</key><array><string>ja</string><string>en</string></array>
-<key>CFBundleExecutable</key><string>Choco</string>
+<key>CFBundleExecutable</key><string>choco-browser</string>
 <key>CFBundleIdentifier</key><string>org.ossarc.browser</string>
 <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
-<key>CFBundleName</key><string>choco</string>
-<key>CFBundleDisplayName</key><string>choco</string>
+<key>CFBundleName</key><string>choco-browser</string>
+<key>CFBundleDisplayName</key><string>choco-browser</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleShortVersionString</key><string>0.1.0</string>
 <key>CFBundleVersion</key><string>1</string>

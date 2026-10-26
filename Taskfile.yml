@@ -1,0 +1,61 @@
+version: '3'
+
+vars:
+  APP: build/choco-browser.app
+
+tasks:
+  default:
+    desc: タスク一覧を表示
+    silent: true
+    cmds:
+      - task --list
+
+  build:
+    desc: デバッグビルドして build/choco-browser.app を作成
+    cmds:
+      - ./scripts/build-app.sh debug
+
+  build:release:
+    desc: リリースビルドして build/choco-browser.app を作成
+    cmds:
+      - ./scripts/build-app.sh release
+
+  run:
+    desc: ビルドして choco-browser.app を起動
+    deps: [build]
+    cmds:
+      - open {{.APP}}
+
+  test:
+    desc: 非UIテストを実行（追加引数は task test -- --filter BrowserAppTests）
+    cmds:
+      - ./scripts/test.sh {{.CLI_ARGS}}
+
+  test:webkit:
+    desc: 実WebKitを必要とするテストも含めて実行
+    env:
+      OSS_ARC_WEBKIT_TESTS: '1'
+    cmds:
+      - ./scripts/test.sh {{.CLI_ARGS}}
+
+  test:ui:
+    desc: フィクスチャサーバーを起動して XCUITest を実行
+    cmds:
+      - ./scripts/test-ui.sh {{.CLI_ARGS}}
+
+  test:all:
+    desc: 非UIテスト（WebKit含む）とUIテストを順に実行
+    cmds:
+      - task: test:webkit
+      - task: test:ui
+
+  fixture:
+    desc: UIテスト用フィクスチャサーバーを単体で起動（port 8765）
+    cmds:
+      - python3 scripts/fixture-server.py --port 8765
+
+  clean:
+    desc: ビルド成果物（.build / build）を削除
+    prompt: .build と build を削除します。よろしいですか？
+    cmds:
+      - rm -rf .build build

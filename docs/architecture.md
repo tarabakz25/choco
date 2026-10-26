@@ -10,6 +10,35 @@
 
 外部Swiftパッケージは使用しない。SwiftPMでライブラリの検証とアプリのビルドを行い、Xcodeプロジェクトも同じソースとローカルパッケージを使用する。
 
+## ソースの配置
+
+```text
+Sources/
+├── BrowserApp/
+│   ├── App/                    # 起動、終了、全体の状態と画面の接続
+│   │   └── Diagnostics/        # 任意で有効にするローカル動作記録
+│   ├── Features/
+│   │   ├── Browser/            # メインウィンドウ、WebViewの配置、サイト操作
+│   │   ├── Sidebar/            # 縦タブ、Space、ホバー表示
+│   │   ├── Settings/           # 設定ウィンドウと4タブ、設定専用の部品
+│   │   ├── CommandPalette/     # URL入力、検索、操作候補
+│   │   ├── Archive/            # アーカイブの一覧と復元
+│   │   └── Editing/            # 名前・URL・Space・Profileなどの編集シート
+│   ├── DesignSystem/
+│   │   ├── Icons/              # 同梱アイコンの読み込みと表示
+│   │   └── Motion/             # 共通の動き、動きを減らす設定
+│   └── Resources/              # フォント、SVG、PDF、出典情報
+├── BrowserCore/                # データ、操作ルール、保存・復元
+└── BrowserRuntime/             # WebKitのセッションとナビゲーション
+```
+
+`BrowserApp`内のフォルダは責任を整理する単位で、Swiftのモジュールは分けていない。SwiftPMのターゲットとXcodeの同期フォルダは、同じ配下のSwiftファイルを再帰的に取り込む。アセットの読み込み契約を保つため、`Resources`の位置とファイル名は維持する。
+
+- `App`はアプリの起動・終了と全体の状態を持ち、各機能を接続する。
+- `Features`には、その機能の画面・状態・専用部品・macOSとの接続処理をまとめる。設定画面はコンテナ、各タブ、ツールバー、専用スタイル、ネイティブのタイトルバー接続に分ける。
+- `DesignSystem`には複数画面で共有する見た目を置く。画面固有の状態やWebKitの操作は持たせない。設定だけで使う色や行部品は`Features/Settings`に置く。
+- 新しい表示を追加するときは、まず既存の機能の責任に含まれるかを判断する。小さな専用部品を共有フォルダへ移したり、フォルダごとに別モジュールを作ったりする必要はない。
+
 ## モデルの意味
 
 - ProfileはCookieなどのWebサイトデータの分離単位。安定したUUIDをWKWebsiteDataStoreの識別子として再利用する。複数Spaceから同じProfileを参照できる。
@@ -39,7 +68,7 @@ URLとレイアウトは復元するが、DOM、入力中フォーム、JavaScri
 macOS 15.4以上でSwiftUIのシェルとNSViewRepresentable経由のWKWebViewを使う。macOS 26以上に限られるSwiftUI WebViewには依存しない。
 
 - 永続Profile: [WebKitのProfile API](https://webkit.org/blog/14423/building-profiles-with-new-webkit-api/)
-- 将来のWeb拡張: [WebKit 18.4の公開API](https://webkit.org/blog/16574/webkit-features-in-safari-18-4/)。Storeや全Chrome APIの互換性とは別要件。
+- Web拡張: [WebKit 18.4の公開API](https://webkit.org/blog/16574/webkit-features-in-safari-18-4/)。`BrowserRuntime/Extensions`がインストール（フォルダ・ZIP・CRX・Chromeウェブストア）、保存、Profileごとの`WKWebExtensionController`を持つ。`BrowserApp/Features/Extensions`がタブ・ウィンドウの橋渡しとポップアップ・オプションページ・権限確認を担う。全Chrome APIの互換性は保証しない。
 - 開発者向け検査: [Safari Web Inspector](https://developer.apple.com/documentation/safari-developer-tools/enabling-inspecting-content-in-your-apps)。非公開APIによるアプリ内Inspector起動は行わない。
 - 一般サイトのパスキー: [ブラウザ向けentitlement](https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.developer.web-browser.public-key-credential)などの条件を後続段階で評価する。
 

@@ -105,7 +105,7 @@ macOS専用、macOS 15.4以上、Swift 6 / SwiftUI / WebKit、MIT。最初の納
 |NAV-04|Open Tab Suggestions|α|新規検索前に既存タブを提示|
 |NAV-05|Space-aware Suggestions|α|現在Spaceの既存タブを優先|
 |NAV-06|Site Search|操作拡充|設定したサイト内検索へ入力を渡す|
-|NAV-07|Custom Search Engines|β|検索先を設定、αはDuckDuckGo|
+|NAV-07|Custom Search Engines|β|検索先を設定、αはGoogle|
 |NAV-08|Custom Keyboard Shortcuts|β|キー割当の編集と競合検知|
 |NAV-09|Keyboard Navigation|α|主要操作と候補選択をキーボードで実行|
 |NAV-10|Quick Tab Switch|α|直前または最近使ったタブへ切替|
