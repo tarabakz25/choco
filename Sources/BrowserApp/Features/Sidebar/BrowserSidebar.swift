@@ -552,7 +552,10 @@ private struct TabRowSurface<Content: View>: View {
 
     var body: some View {
         content
-            .padding(.trailing, hovering || isSelected ? ChocoSpace.u(20) : 0)
+            .padding(.trailing, hovering ? ChocoSpace.u(20) : 0)
+            // Making room for the close button re-truncates the title; animating that cross-fades the two
+            // truncations into a ghosted label, so the layout snaps and only the fills and the button fade.
+            .animation(nil, value: hovering)
             .background {
                 ZStack {
                     RoundedRectangle(cornerRadius: 8).fill(ChocoTheme.selected).opacity(isSelected ? 1 : 0)
@@ -565,9 +568,9 @@ private struct TabRowSurface<Content: View>: View {
             .overlay {
                 TabDragSource(model: model, tab: tab, onPress: { pressed = $0 }, onClick: { model.select(tab) })
             }
-            // Figma Tab Row: the close button shows on hover and on the selected row; on the selected row it keeps a 5% fill.
+            // Figma Tab Row: the close button shows only on hover; on the selected row it carries a 5% fill.
             .overlay(alignment: .trailing) {
-                if hovering || isSelected {
+                if hovering {
                     Button { model.send(.closeTab(tab.id)) } label: {
                         DesignIcon("98f70", size: 12).opacity(0.7).frame(width: ChocoSpace.u(20), height: ChocoSpace.u(20))
                             .background(isSelected && !pressed ? ChocoTheme.hover : Color.clear, in: RoundedRectangle(cornerRadius: 5))
@@ -576,6 +579,8 @@ private struct TabRowSurface<Content: View>: View {
                     .padding(.trailing, ChocoSpace.u(6))
                     .help(tab.isPinned ? "固定タブを閉じる" : "タブをアーカイブ").accessibilityLabel("タブを閉じる")
                     .accessibilityIdentifier("close-tab-\(tab.id)")
+                    // The title regains the button's room at once, so the button must not fade out over it.
+                    .transition(.asymmetric(insertion: .opacity, removal: .identity))
                 }
             }
             .animation(reduceMotion ? nil : .timingCurve(0.2, 0.8, 0.2, 1, duration: pressed ? 0.07 : 0.23), value: pressed)
