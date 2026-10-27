@@ -8,49 +8,53 @@ struct ProfilesSettingsView: View {
     let onShowPrivacyInfo: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 19) {
-            Text("Profiles keep logins and cookies separate across Spaces.\nYou can use a Profile across one or more Spaces.")
-                .lineSpacing(1).fixedSize(horizontal: false, vertical: true)
-            HStack(alignment: .top, spacing: 10) {
+        VStack(alignment: .leading, spacing: ChocoSpace.u(18)) {
+            Text(introduction).fixedSize(horizontal: false, vertical: true)
+                .environment(\.openURL, OpenURLAction { _ in UnsupportedNotice.shared.show("プロファイルの詳細ヘルプ"); return .handled })
+            HStack(alignment: .top, spacing: ChocoSpace.u(10)) {
                 profileList
-                VStack(alignment: .leading, spacing: 27) {
+                VStack(alignment: .leading, spacing: ChocoSpace.u(27)) {
                     SettingsGroup {
-                        SettingsRow("Search engine") { SettingsFixedValue("Google") }
-                        SettingsRow("Manage search") { SettingsUnavailableButton("Search Settings…") }
-                        SettingsUnavailableToggle("Search engine suggestions", divider: false)
+                        SettingsRow("Search engine") {
+                            SettingsDropdown(key: "settings.searchEngine", options: ["Google"], feature: "検索エンジンの変更")
+                        }
+                        SettingsRow("Manage search") { SettingsNoticeButton("Search Settings…", feature: "検索設定") }
+                        SettingsFeatureToggle("Include search engine suggestions", key: "settings.searchSuggestions", defaultValue: true,
+                                              feature: "検索候補", divider: false)
                     }
                     SettingsGroup {
-                        SettingsRow("Archive tabs after", info: true) { SettingsFixedValue("Manually") }
-                        SettingsRow("New documents") { SettingsFixedValue("—") }
+                        SettingsRow("Archive tabs after", info: true) {
+                            SettingsDropdown(key: "settings.archiveAfter", options: ["12 hours (default)", "24 hours", "7 days", "30 days"],
+                                             feature: "タブの自動アーカイブ")
+                        }
+                        SettingsRow("New documents") {
+                            SettingsDropdown(key: "settings.newDocuments", options: ["——"], feature: "新規ドキュメントの保存先")
+                        }
                         SettingsRow("Download location", divider: false) {
-                            HStack(spacing: 6) {
-                                DesignIcon("settings-9e9e6", size: 16)
-                                Text("Downloads")
-                                DesignIcon("settings-4e45f", size: 12)
-                            }.frame(width: 144, height: 24).background(SettingsStyle.button, in: RoundedRectangle(cornerRadius: 6))
-                        }.disabled(true).help("ダウンロード管理は未対応です。")
+                            SettingsDropdown(key: "settings.downloadLocation", options: ["Downloads"], feature: "ダウンロード先の変更", icon: "settings-9e9e6")
+                        }
                     }
                     VStack(alignment: .leading, spacing: ChocoSpace.xs) {
-                        Text("Your Data and Settings").font(ChocoTheme.font(11, weight: .medium))
-                            .foregroundStyle(SettingsStyle.secondary).padding(.leading, 10)
+                        Text("Your Data and Settings").font(ChocoTheme.font(11, weight: .semibold))
+                            .foregroundStyle(SettingsStyle.secondary).padding(.leading, ChocoSpace.u(10))
                         SettingsGroup {
-                            dataRow("Privacy and Security", icon: "428da", color: "0A84FF", available: true)
+                            dataRow("Privacy and Security", icon: "428da", color: "0A84FF") { onShowPrivacyInfo() }
                             dataRow("Passwords", icon: "9a791", color: "30D158")
                             dataRow("Credit Cards", icon: "2ed07", color: "E6BE17")
                             dataRow("Notifications", icon: "796fe", color: "FF9F0A")
                             dataRow("Clear Browsing Data", icon: "2e000", color: "FF453A", divider: false)
                         }
-                    }.padding(.top, 11)
-                }.frame(width: 341)
+                    }.padding(.top, ChocoSpace.u(11))
+                }.frame(width: ChocoSpace.u(341))
             }
-        }.padding(.horizontal, 64).padding(.top, 20)
+        }.padding(.horizontal, ChocoSpace.u(64)).padding(.top, ChocoSpace.u(20))
     }
 
     private var profileList: some View {
         VStack(spacing: 0) {
             Text("Your Profiles").font(ChocoTheme.font(11, weight: .semibold))
                 .foregroundStyle(SettingsStyle.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, ChocoSpace.lg).frame(height: 28)
+                .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, ChocoSpace.u(15)).frame(height: ChocoSpace.u(26))
             Rectangle().fill(SettingsStyle.divider).frame(height: 1)
             ScrollView {
                 VStack(spacing: ChocoSpace.xs) {
@@ -62,38 +66,47 @@ struct ProfilesSettingsView: View {
                                 let count = model.state.spaces.filter { $0.profileID == profile.id }.count
                                 Text("\(count) \(count == 1 ? "Space" : "Spaces")").font(ChocoTheme.font(11))
                             }
-                            .padding(.horizontal, 6).frame(height: 32)
-                            .background(selectedProfileID == profile.id ? Color(hex: "35313C") : .clear, in: RoundedRectangle(cornerRadius: 5))
+                            .padding(.horizontal, ChocoSpace.u(6)).frame(height: ChocoSpace.u(32))
+                            .background(selectedProfileID == profile.id ? Color(hex: "34303A") : .clear, in: RoundedRectangle(cornerRadius: 6))
                             .contentShape(Rectangle())
                         }.buttonStyle(.plain).accessibilityIdentifier("settings-profile-\(profile.id)")
                             .accessibilityAddTraits(selectedProfileID == profile.id ? .isSelected : [])
                     }
-                }.padding(.horizontal, 16).padding(.top, 14)
+                }.padding(.horizontal, ChocoSpace.u(15)).padding(.top, ChocoSpace.u(14))
             }
             HStack(spacing: 0) {
-                Button { onAddProfile() } label: { DesignIcon("settings-c8b4e", size: 16).frame(width: 32, height: 28) }
+                Button { onAddProfile() } label: { DesignIcon("settings-c8b4e", size: 16).frame(width: ChocoSpace.u(32), height: ChocoSpace.u(28)) }
                     .accessibilityLabel("プロファイルを追加…").accessibilityIdentifier("settings-add-profile")
-                Rectangle().fill(SettingsStyle.divider).frame(width: 1, height: 16)
-                Button {} label: { DesignIcon("settings-755b6", size: 16).frame(width: 32, height: 28) }
-                    .disabled(true).accessibilityLabel("プロファイルを削除（未対応）")
-                Rectangle().fill(SettingsStyle.divider).frame(width: 1, height: 16)
-                Button {} label: { DesignIcon("settings-b19b4", size: 18).frame(width: 32, height: 28) }
-                    .disabled(true).accessibilityLabel("プロファイルのその他の操作（未対応）")
+                Rectangle().fill(SettingsStyle.divider).frame(width: 1, height: ChocoSpace.u(16))
+                Button { UnsupportedNotice.shared.show("プロファイルの削除") } label: { DesignIcon("settings-755b6", size: 16).frame(width: ChocoSpace.u(32), height: ChocoSpace.u(28)) }
+                    .accessibilityLabel("プロファイルを削除")
+                Rectangle().fill(SettingsStyle.divider).frame(width: 1, height: ChocoSpace.u(16))
+                Button { UnsupportedNotice.shared.show("プロファイルの編集") } label: { DesignIcon("settings-b19b4", size: 18).frame(width: ChocoSpace.u(32), height: ChocoSpace.u(28)) }
+                    .accessibilityLabel("プロファイルを編集")
                 Spacer(minLength: 0)
-            }.buttonStyle(.plain).frame(height: 30)
+            }.buttonStyle(.plain).frame(height: ChocoSpace.u(30))
                 .overlay(alignment: .top) { Rectangle().fill(SettingsStyle.divider).frame(height: 1) }
         }
-        .frame(width: 205, height: 478)
-        .background(Color(hex: "1D1F21"), in: RoundedRectangle(cornerRadius: 8))
+        .frame(width: ChocoSpace.u(205), height: ChocoSpace.u(478))
+        .background(Color(hex: "1C1E20"), in: RoundedRectangle(cornerRadius: 8))
         .overlay { RoundedRectangle(cornerRadius: 8).strokeBorder(SettingsStyle.border) }
     }
 
-    private func dataRow(_ title: String, icon: String, color: String, available: Bool = false, divider: Bool = true) -> some View {
-        Button { onShowPrivacyInfo() } label: {
+    private func dataRow(_ title: String, icon: String, color: String, divider: Bool = true, action: (() -> Void)? = nil) -> some View {
+        Button { if let action { action() } else { UnsupportedNotice.shared.show(title) } } label: {
             SettingsRow(title, icon: icon, iconColor: color, divider: divider) {
                 DesignIcon("settings-5e94d", size: 16)
             }.contentShape(Rectangle())
-        }.buttonStyle(.plain).disabled(!available)
-            .help(available ? "このブラウザのデータの扱いを表示" : "このバージョンでは未対応です。")
+        }.buttonStyle(.plain)
+    }
+
+    /// Figma copy, with the blue "Learn more." link.
+    private var introduction: AttributedString {
+        var text = AttributedString("Profiles help keep your data separate across Spaces — like history, logins, cookies, and\nextensions. You can use any Profile across one or more Spaces. ")
+        var link = AttributedString("Learn more.")
+        link.link = URL(string: "choco-browser://profiles-help")
+        link.foregroundColor = Color(hex: "3A84D4")
+        text.append(link)
+        return text
     }
 }

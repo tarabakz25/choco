@@ -3,9 +3,9 @@ import BrowserCore
 import SwiftUI
 
 /// The sidebar's "New" menu (Figma 149:7410), opened by the plus button next to the Space dots.
-/// Easel and Boost stay visible but disabled: they are outside the shipped feature set.
+/// Easel and Boost look and lay out like the design; until they exist they answer with `UnsupportedNotice`.
 struct NewMenuView: View {
-    static let width: CGFloat = 184
+    static let width: CGFloat = ChocoSpace.u(184)
     private static let surface = Color(hex: "090909")
     private static let highlight = Color(hex: "3B3B3B")
 
@@ -27,10 +27,16 @@ struct NewMenuView: View {
                 model.editor = .folder(nil)
             }
             divider(2)
-            row(3, icon: "36ad5", title: "新しいEasel", id: "new-menu-easel", enabled: false) {}
-            row(4, icon: "b2445", title: "新しいBoost", id: "new-menu-boost", enabled: false) {}
+            row(3, icon: "36ad5", title: "新しいEasel", shortcut: "^⇧E", id: "new-menu-easel") {
+                model.showsNewMenu = false
+                UnsupportedNotice.shared.show("Easel")
+            }
+            row(4, icon: "b2445", title: "新しいBoost", id: "new-menu-boost") {
+                model.showsNewMenu = false
+                UnsupportedNotice.shared.show("Boost")
+            }
             divider(5)
-            row(6, icon: "11aac", title: "新しいSplit", id: "new-menu-split", enabled: canSplit) { model.newSplit() }
+            row(6, icon: "11aac", title: "新しいSplit", shortcut: "^⇧;", id: "new-menu-split", enabled: canSplit) { model.newSplit() }
             row(7, icon: "b1a06", title: "新しいタブ", shortcut: "⌘T", id: "new-menu-tab") { model.showCommand(.newTab) }
         }
         .padding(ChocoSpace.rem(0.375))
@@ -38,8 +44,8 @@ struct NewMenuView: View {
         .background(Self.surface, in: RoundedRectangle(cornerRadius: 12))
         .overlay(alignment: .bottomLeading) {
             if let tail = DesignIcon.image(named: "110fc") {
-                Image(nsImage: tail).resizable().frame(width: 12, height: 6)
-                    .offset(x: 162, y: 5.5).accessibilityHidden(true)
+                Image(nsImage: tail).resizable().frame(width: ChocoSpace.u(12), height: ChocoSpace.u(6))
+                    .offset(x: ChocoSpace.u(162), y: ChocoSpace.u(5.5)).accessibilityHidden(true)
             }
         }
         .shadow(color: .black.opacity(0.45), radius: 12, x: 0, y: 8)
@@ -57,7 +63,7 @@ struct NewMenuView: View {
     private func row(_ index: Int, icon: String, title: String, shortcut: String? = nil, id: String,
                      enabled: Bool = true, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(spacing: 6) {
+            HStack(spacing: ChocoSpace.u(6)) {
                 DesignIcon(icon, size: 16)
                 Text(title).font(ChocoTheme.font(13, weight: .semibold)).lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -65,9 +71,9 @@ struct NewMenuView: View {
                     Text(shortcut).font(ChocoTheme.font(12, weight: .medium)).foregroundStyle(ChocoTheme.tertiary)
                 }
             }
-            .padding(.horizontal, 10).frame(height: 36)
+            .padding(.horizontal, ChocoSpace.u(10)).frame(height: ChocoSpace.u(36))
         }
-        .buttonStyle(ChocoPressStyle(radius: 8, tint: Color(hex: "4A4A4A"), hoverTint: Self.highlight))
+        .buttonStyle(ChocoPressStyle(radius: 8, tint: Color.white.opacity(0.16), hoverTint: Color.white.opacity(0.08)))
         .disabled(!enabled).opacity(enabled ? 1 : 0.45)
         .modifier(MenuItemEntry(index: index, shown: shown, reduceMotion: reduceMotion))
         .accessibilityIdentifier(id)
@@ -75,7 +81,7 @@ struct NewMenuView: View {
 
     private func divider(_ index: Int) -> some View {
         Rectangle().fill(Self.highlight).frame(height: 1)
-            .padding(.horizontal, ChocoSpace.xs).frame(height: 15)
+            .padding(.horizontal, ChocoSpace.xs).frame(height: ChocoSpace.u(15))
             .modifier(MenuItemEntry(index: index, shown: shown, reduceMotion: reduceMotion))
             .accessibilityHidden(true)
     }

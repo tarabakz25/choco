@@ -6,9 +6,12 @@ import SwiftUI
 /// explicit restore action, never by selecting a search result.
 struct ArchiveLibraryView: View {
     @Bindable var model: AppModel
+    @Environment(\.spaceTheme) private var theme
     @State private var search = ""
     @State private var scope = ArchiveScope.allSpaces
     @State private var selectedEntryID: UUID?
+    @State private var page = LibraryPage.archive
+    @State private var pageSearch = ""
     @FocusState private var searchFocused: Bool
     @FocusState private var focusedEntryID: UUID?
 
@@ -16,6 +19,42 @@ struct ArchiveLibraryView: View {
         case allSpaces, currentSpace
         var id: Self { self }
         var label: String { self == .allSpaces ? "すべてのSpace" : "現在のSpace" }
+    }
+
+    /// Figma's rail pages. Only the Archive is backed by data; the others show the design's empty state.
+    private enum LibraryPage: String, CaseIterable, Identifiable {
+        case media, downloads, easels, boosts, archive
+        var id: Self { self }
+        var feature: String {
+            switch self {
+            case .media: "メディア"
+            case .downloads: "ダウンロード"
+            case .easels: "Easel"
+            case .boosts: "Boost"
+            case .archive: "アーカイブ"
+            }
+        }
+        var icon: String {
+            switch self {
+            case .media: "5de62"
+            case .downloads: "0b3d0"
+            case .easels: "cf6cb"
+            case .boosts: "c571a"
+            case .archive: "61b66"
+            }
+        }
+        var searchPrompt: String { "\(feature)を検索" }
+        var emptyDescription: String {
+            switch self {
+            case .media: "ドキュメント、デスクトップ、ダウンロードフォルダに保存したメディアが、キャプチャと一緒にここに表示されます。"
+            case .downloads: "ダウンロードしたファイルが、ここに表示されます。"
+            case .easels: "作成したEaselが、ここに表示されます。"
+            case .boosts: "サイトごとのBoostが、ここに表示されます。"
+            case .archive: ""
+            }
+        }
+        /// Figma's Downloads header pairs a 180pt search field with a filter button.
+        var hasFilter: Bool { self == .downloads }
     }
 
     private struct DayGroup: Identifiable {
@@ -39,18 +78,22 @@ struct ArchiveLibraryView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            libraryRail.frame(width: 96)
-            archivePanel.frame(width: 266)
+            libraryRail.frame(width: ChocoSpace.u(96))
+            libraryPanel.frame(width: ChocoSpace.u(266))
         }
         .frame(width: ChocoTheme.archiveWidth)
         .frame(maxHeight: .infinity)
-        .background(ChocoTheme.sidebar)
+        .background(theme.sidebar)
         .foregroundStyle(ChocoTheme.text)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("library-sidebar")
         .task { await focusSearchAfterMount() }
         .onChange(of: search) { _, _ in clearSelection() }
         .onChange(of: scope) { _, _ in clearSelection() }
+        .onChange(of: page) { _, new in
+            clearSelection(); pageSearch = ""
+            if new == .archive { Task { await focusSearchAfterMount() } }
+        }
         .onChange(of: model.state.archive) { _, entries in
             if let selectedEntryID, !entries.contains(where: { $0.id == selectedEntryID }) { clearSelection() }
         }
@@ -59,32 +102,27 @@ struct ArchiveLibraryView: View {
     private var libraryRail: some View {
         GeometryReader { geometry in
             let compact = geometry.size.height < 650
+            let height: CGFloat = compact ? 44 : 56
             VStack(spacing: compact ? 10 : 18) {
-                unavailableRailItem("メディア", icon: "5de62", reason: "メディアライブラリは未対応です。", height: compact ? 44 : 56)
-                unavailableRailItem("ダウンロード", icon: "0b3d0", reason: "ダウンロード履歴の一覧は未対応です。ファイルの保存はWebページから行えます。", height: compact ? 44 : 56)
-                unavailableRailItem("Easel", icon: "cf6cb", reason: "Easelは未対応です。", height: compact ? 44 : 56)
+                pageButton(.media, height: height)
+                pageButton(.downloads, height: height)
+                pageButton(.easels, height: height)
                 Button { model.showsArchive = false } label: {
-                    railLabel("Space", icon: "e2dfa", height: compact ? 44 : 56)
+                    railLabel("Space", icon: "e2dfa", height: height)
                 }
                 .buttonStyle(.plain)
                 .help("現在のSpaceに戻る")
                 .accessibilityIdentifier("library-spaces")
-                unavailableRailItem("Boost", icon: "c571a", reason: "サイトのBoost編集は未対応です。", height: compact ? 44 : 56)
-                Button { searchFocused = true } label: {
-                    railLabel("アーカイブ", icon: "61b66", active: true, height: compact ? 44 : 56)
-                }
-                .buttonStyle(.plain)
-                .help("閉じたタブを検索")
-                .accessibilityAddTraits(.isSelected)
-                .accessibilityIdentifier("library-archive")
+                pageButton(.boosts, height: height)
+                pageButton(.archive, height: height)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding(.top, 52)
-            .padding(.bottom, 125)
+            .padding(.top, ChocoSpace.u(52))
+            .padding(.bottom, ChocoSpace.u(125))
             .overlay(alignment: .bottom) {
                 HStack(spacing: 0) {
                     Button { model.showsArchive = false } label: {
-                        DesignIcon("687ab", size: 16).opacity(0.7).frame(width: 26, height: 26)
+                        DesignIcon("687ab", size: 16).opacity(0.7).frame(width: ChocoSpace.u(26), height: ChocoSpace.u(26))
                     }
                     .buttonStyle(.plain)
                     .help("サイドバーに戻る")
@@ -99,7 +137,7 @@ struct ArchiveLibraryView: View {
                             }
                         }
                     } label: {
-                        SpaceIcon(model.selectedSpace?.icon ?? "", size: 16).opacity(0.7).frame(width: 26, height: 26)
+                        SpaceIcon(model.selectedSpace?.icon ?? "", size: 16).opacity(0.7).frame(width: ChocoSpace.u(26), height: ChocoSpace.u(26))
                     }
                     .menuStyle(.borderlessButton)
                     .menuIndicator(.hidden)
@@ -109,30 +147,86 @@ struct ArchiveLibraryView: View {
                     .accessibilityIdentifier("library-space-picker")
                 }
                 .padding(.horizontal, ChocoSpace.md)
-                .padding(.bottom, 10)
+                .padding(.bottom, ChocoSpace.u(10))
             }
         }
     }
 
+    private func pageButton(_ target: LibraryPage, height: CGFloat) -> some View {
+        Button {
+            if page == target, target == .archive { searchFocused = true } else { page = target }
+        } label: {
+            railLabel(target.feature, icon: target.icon, active: page == target, height: height)
+        }
+        .buttonStyle(.plain)
+        .help(target == .archive ? "閉じたタブを検索" : target.feature)
+        .accessibilityAddTraits(page == target ? .isSelected : [])
+        .accessibilityIdentifier("library-\(target.rawValue)")
+    }
+
     private func railLabel(_ title: String, icon: String, active: Bool = false, height: CGFloat) -> some View {
-        VStack(spacing: 5) {
+        VStack(spacing: ChocoSpace.u(5)) {
             DesignIcon(icon, size: 20).opacity(active ? 0.95 : 0.7)
             Text(title)
                 .font(ChocoTheme.font(10, weight: .semibold))
                 .foregroundStyle(active ? ChocoTheme.text : ChocoTheme.secondary)
                 .lineLimit(1)
         }
-        .frame(width: 70, height: height)
+        .frame(width: ChocoSpace.u(70), height: height)
         .background(active ? ChocoTheme.selected : Color.clear, in: RoundedRectangle(cornerRadius: 8))
         .contentShape(RoundedRectangle(cornerRadius: 8))
     }
 
-    private func unavailableRailItem(_ title: String, icon: String, reason: String, height: CGFloat) -> some View {
-        Button {} label: { railLabel(title, icon: icon, height: height) }
-            .buttonStyle(.plain)
-            .disabled(true)
-            .help(reason)
-            .accessibilityHint(reason)
+    @ViewBuilder private var libraryPanel: some View {
+        if page == .archive { archivePanel } else { placeholderPanel(page) }
+    }
+
+    /// Figma Media / Downloads / Easels: header row, then the 220pt empty state at 53% of the panel height.
+    private func placeholderPanel(_ target: LibraryPage) -> some View {
+        VStack(spacing: ChocoSpace.xs) {
+            HStack(spacing: ChocoSpace.u(6)) {
+                searchField(prompt: target.searchPrompt, text: $pageSearch, identifier: "library-search")
+                if target.hasFilter {
+                    Button { UnsupportedNotice.shared.show(target.feature) } label: {
+                        HStack(spacing: ChocoSpace.xs) {
+                            DesignIcon("03c3d", size: 14).opacity(0.7)
+                            Text("絞込").font(ChocoTheme.font(13, weight: .medium)).foregroundStyle(ChocoTheme.secondary)
+                        }
+                        .padding(.leading, ChocoSpace.u(6)).padding(.trailing, ChocoSpace.u(8))
+                        .frame(height: ChocoSpace.u(26))
+                        .contentShape(RoundedRectangle(cornerRadius: 6))
+                    }
+                    .buttonStyle(ChocoPressStyle(radius: 6))
+                    .accessibilityIdentifier("library-filter")
+                }
+            }
+            GeometryReader { geometry in
+                VStack(spacing: ChocoSpace.u(8)) {
+                    DesignIcon(target.icon, size: 32).opacity(0.55)
+                    Text("まだ何もありません").font(ChocoTheme.font(13, weight: .semibold))
+                    Text(target.emptyDescription).font(ChocoTheme.font(11)).foregroundStyle(ChocoTheme.secondary)
+                        .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
+                    Button { UnsupportedNotice.shared.show(target.feature) } label: {
+                        Text("詳しく見る").font(ChocoTheme.font(11, weight: .semibold))
+                            .padding(.horizontal, ChocoSpace.u(10)).padding(.vertical, ChocoSpace.u(4))
+                            .background(theme.field, in: RoundedRectangle(cornerRadius: 6))
+                            .contentShape(RoundedRectangle(cornerRadius: 6))
+                    }
+                    .buttonStyle(ChocoPressStyle(radius: 6))
+                    .accessibilityIdentifier("library-learn-more")
+                }
+                .frame(width: ChocoSpace.u(220))
+                .frame(maxWidth: .infinity)
+                // Figma 20:2192 sits at y=600 of a 1127pt panel (header already consumed above).
+                .padding(.top, max(ChocoSpace.u(24), geometry.size.height * 0.532 - ChocoSpace.u(54)) )
+            }
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("library-empty-\(target.rawValue)")
+        }
+        .padding(.horizontal, ChocoSpace.u(8))
+        .padding(.top, ChocoSpace.u(10))
+        .padding(.bottom, ChocoSpace.u(8))
+        .frame(maxHeight: .infinity, alignment: .top)
     }
 
     private var archivePanel: some View {
@@ -149,8 +243,8 @@ struct ArchiveLibraryView: View {
                                     .font(ChocoTheme.font(11, weight: .semibold))
                                     .foregroundStyle(ChocoTheme.secondary)
                                     .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.leading, 8)
-                                    .frame(height: 24)
+                                    .padding(.leading, ChocoSpace.u(8))
+                                    .frame(height: ChocoSpace.u(24))
                                     .accessibilityAddTraits(.isHeader)
                                 ForEach(group.entries) { entry in
                                     ArchiveLibraryRow(entry: entry, selected: selectedEntryID == entry.id) { restore(entry.id) }
@@ -164,7 +258,7 @@ struct ArchiveLibraryView: View {
                                         .onKeyPress(.upArrow) { moveSelection(from: entry.id, backwards: true); return .handled }
                                 }
                             }
-                        }.padding(.top, 8)
+                        }.padding(.top, ChocoSpace.u(8))
                     }
                     .scrollIndicators(.never)
                     .onChange(of: selectedEntryID) { _, id in
@@ -173,34 +267,15 @@ struct ArchiveLibraryView: View {
                 }
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.top, 10)
-        .padding(.bottom, 8)
+        .padding(.horizontal, ChocoSpace.u(8))
+        .padding(.top, ChocoSpace.u(10))
+        .padding(.bottom, ChocoSpace.u(8))
         .frame(maxHeight: .infinity, alignment: .top)
     }
 
     private var searchHeader: some View {
-        HStack(spacing: 6) {
-            HStack(spacing: 6) {
-                DesignIcon("9d9ff", size: 13).opacity(0.6)
-                TextField("アーカイブを検索", text: $search, prompt: Text("アーカイブを検索").foregroundStyle(ChocoTheme.tertiary))
-                    .font(ChocoTheme.font(13))
-                    .textFieldStyle(.plain)
-                    .focused($searchFocused)
-                    .accessibilityIdentifier("library-search")
-                    .onKeyPress(.downArrow) {
-                        guard !hasMarkedText, let first = visibleEntries.first else { return .ignored }
-                        selectedEntryID = first.id; focusedEntryID = first.id; return .handled
-                    }
-                    .onKeyPress(.escape) {
-                        guard !hasMarkedText else { return .ignored }
-                        if search.isEmpty { model.showsArchive = false } else { search = "" }
-                        return .handled
-                    }
-            }
-            .padding(.horizontal, 8)
-            .frame(height: 26)
-            .background(ChocoTheme.field, in: RoundedRectangle(cornerRadius: 8))
+        HStack(spacing: ChocoSpace.u(6)) {
+            searchField(prompt: "アーカイブを検索", text: $search, identifier: "library-search", archive: true)
             Menu {
                 Picker("表示するSpace", selection: $scope) {
                     ForEach(ArchiveScope.allCases) { item in Text(item.label).tag(item) }
@@ -211,9 +286,9 @@ struct ArchiveLibraryView: View {
                     Text("絞込").font(ChocoTheme.font(13, weight: .medium))
                         .foregroundStyle(ChocoTheme.secondary)
                 }
-                .padding(.leading, 6).padding(.trailing, 8)
-                .frame(height: 26)
-                .background(scope == .currentSpace ? ChocoTheme.field : Color.clear, in: RoundedRectangle(cornerRadius: 6))
+                .padding(.leading, ChocoSpace.u(6)).padding(.trailing, ChocoSpace.u(8))
+                .frame(height: ChocoSpace.u(26))
+                .background(scope == .currentSpace ? theme.field : Color.clear, in: RoundedRectangle(cornerRadius: 6))
             }
             .menuStyle(.borderlessButton)
             .menuIndicator(.hidden)
@@ -225,8 +300,31 @@ struct ArchiveLibraryView: View {
         }
     }
 
+    private func searchField(prompt: String, text: Binding<String>, identifier: String, archive: Bool = false) -> some View {
+        HStack(spacing: ChocoSpace.u(6)) {
+            DesignIcon("9d9ff", size: 13).opacity(0.6)
+            TextField(prompt, text: text, prompt: Text(prompt).foregroundStyle(ChocoTheme.tertiary))
+                .font(ChocoTheme.font(13))
+                .textFieldStyle(.plain)
+                .focused($searchFocused)
+                .accessibilityIdentifier(identifier)
+                .onKeyPress(.downArrow) {
+                    guard archive, !hasMarkedText, let first = visibleEntries.first else { return .ignored }
+                    selectedEntryID = first.id; focusedEntryID = first.id; return .handled
+                }
+                .onKeyPress(.escape) {
+                    guard !hasMarkedText else { return .ignored }
+                    if text.wrappedValue.isEmpty { model.showsArchive = false } else { text.wrappedValue = "" }
+                    return .handled
+                }
+        }
+        .padding(.horizontal, ChocoSpace.u(8))
+        .frame(height: ChocoSpace.u(26))
+        .background(theme.field, in: RoundedRectangle(cornerRadius: 8))
+    }
+
     private var emptyState: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: ChocoSpace.u(10)) {
             DesignIcon("61b66", size: 24).opacity(0.65)
             Text(emptyTitle).font(ChocoTheme.font(13, weight: .medium))
                 .foregroundStyle(ChocoTheme.text)
@@ -240,7 +338,7 @@ struct ArchiveLibraryView: View {
                     .foregroundStyle(ChocoTheme.text)
             }
         }
-        .padding(.horizontal, ChocoSpace.md).padding(.top, 36)
+        .padding(.horizontal, ChocoSpace.md).padding(.top, ChocoSpace.u(36))
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
@@ -311,7 +409,7 @@ private struct ArchiveLibraryRow: View {
     }
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: ChocoSpace.u(10)) {
             SiteIcon(url: entry.tab.url, size: 16)
             VStack(alignment: .leading, spacing: 1) {
                 Text(entry.tab.displayTitle).font(ChocoTheme.font(13, weight: .medium))
@@ -323,7 +421,7 @@ private struct ArchiveLibraryRow: View {
             Button(action: restore) {
                 Text("復元").font(ChocoTheme.font(10, weight: .medium))
                     .foregroundStyle(ChocoTheme.text)
-                    .padding(.horizontal, ChocoSpace.xs).frame(height: 24)
+                    .padding(.horizontal, ChocoSpace.xs).frame(height: ChocoSpace.u(24))
                     .background(hovering || selected ? ChocoTheme.selected : Color.clear, in: RoundedRectangle(cornerRadius: 5))
             }
             .buttonStyle(.plain)
@@ -332,8 +430,8 @@ private struct ArchiveLibraryRow: View {
             .accessibilityLabel("\(entry.tab.displayTitle)を復元")
             .accessibilityIdentifier("restore-archive-\(entry.id)")
         }
-        .padding(.leading, 8).padding(.trailing, 6)
-        .frame(height: 44)
+        .padding(.leading, ChocoSpace.u(8)).padding(.trailing, ChocoSpace.u(6))
+        .frame(height: ChocoSpace.u(44))
         .background(hovering || selected ? ChocoTheme.selected : Color.clear, in: RoundedRectangle(cornerRadius: 8))
         .contentShape(RoundedRectangle(cornerRadius: 8))
         .onHover { hovering = $0 }

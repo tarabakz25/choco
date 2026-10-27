@@ -24,15 +24,21 @@ import Testing
         }
     }
 
-    @Test func bundledFontsRegisterWithoutInstallingSystemFonts() throws {
-        ChocoTheme.registerFonts()
-        let families = Set(NSFontManager.shared.availableFontFamilies)
-        #expect(families.contains("Inter"))
-        #expect(families.contains("Noto Sans JP"))
-        for name in ["Inter", "NotoSansJP"] {
-            let url = try #require(DesignResources.bundle.url(forResource: name, withExtension: "ttf"))
-            #expect(try Data(contentsOf: url).count > 0)
-        }
+    @Test func spacingTokensMatchFigmaRemScale() {
+        #expect(ChocoSpace.rem == 16 && ChocoSpace.scale == 1)
+        #expect([ChocoSpace.xxs, ChocoSpace.xs, ChocoSpace.sm, ChocoSpace.md, ChocoSpace.lg, ChocoSpace.xl, ChocoSpace.xxl]
+            == [2, 4, 8, 12, 16, 24, 32])
+        #expect(ChocoTheme.sidebarWidth == 200 && ChocoTheme.siteControlsWidth == 220)
+        #expect(ChocoSpace.u(13) == 13)
+    }
+
+    @Test func spaceColourSelectsTokenMode() {
+        #expect(SpaceTheme(colorHex: nil) == .dark)
+        #expect(SpaceTheme(colorHex: "808080") == .dark) // grey: no hue
+        #expect(SpaceTheme(colorHex: "7896B8") == .indigo) // default Space colour
+        #expect(SpaceTheme(colorHex: "6C5CE7") == .indigo)
+        #expect(SpaceTheme(colorHex: "2EC4B6") == .teal)
+        #expect(SpaceTheme(colorHex: "E55039") == .dark) // red
     }
 
     @Test func closingTransientContextDoesNotArchiveUnderlyingPage() async throws {

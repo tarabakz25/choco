@@ -29,7 +29,7 @@ struct BrowserSettings: View {
         }
         .font(ChocoTheme.font(13))
         .foregroundStyle(SettingsStyle.text)
-        .frame(width: 684, height: 650 - titlebarHeight)
+        .frame(width: ChocoSpace.u(684), height: ChocoSpace.u(650) - titlebarHeight)
         .background(SettingsStyle.background)
         .preferredColorScheme(.dark)
         .tint(SettingsStyle.accent)

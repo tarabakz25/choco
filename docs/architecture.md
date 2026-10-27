@@ -25,9 +25,10 @@ Sources/
 │   │   ├── Archive/            # アーカイブの一覧と復元
 │   │   └── Editing/            # 名前・URL・Space・Profileなどの編集シート
 │   ├── DesignSystem/
-│   │   ├── Icons/              # 同梱アイコンの読み込みと表示
+│   │   ├── Components/         # 画面に依存しない基底UI(Button・TextField・ColorSwatch・Slider)
+│   │   ├── Icons/              # 同梱アイコンの読み込みと表示、意味で引ける`ChocoIcon`
 │   │   └── Motion/             # 共通の動き、動きを減らす設定
-│   └── Resources/              # フォント、SVG、PDF、出典情報
+│   └── Resources/              # SVG、PDF、出典情報
 ├── BrowserCore/                # データ、操作ルール、保存・復元
 └── BrowserRuntime/             # WebKitのセッションとナビゲーション
 ```
@@ -37,6 +38,7 @@ Sources/
 - `App`はアプリの起動・終了と全体の状態を持ち、各機能を接続する。
 - `Features`には、その機能の画面・状態・専用部品・macOSとの接続処理をまとめる。設定画面はコンテナ、各タブ、ツールバー、専用スタイル、ネイティブのタイトルバー接続に分ける。
 - `DesignSystem`には複数画面で共有する見た目を置く。画面固有の状態やWebKitの操作は持たせない。設定だけで使う色や行部品は`Features/Settings`に置く。
+- `DesignSystem/Components`は、別のレイアウトでも再利用できる基底UIの置き場。見た目の違いは引数(`kind`・`tone`・`keyHint`など)で受け、ホバー・押下・無効・フォーカスは環境から決める。`AppModel`・`BrowserStore`・`Localizer`には依存させず、文字列は呼び出し側が渡す。新しい汎用部品は`Features`ではなくここへ追加する。
 - 新しい表示を追加するときは、まず既存の機能の責任に含まれるかを判断する。小さな専用部品を共有フォルダへ移したり、フォルダごとに別モジュールを作ったりする必要はない。
 
 ## モデルの意味
