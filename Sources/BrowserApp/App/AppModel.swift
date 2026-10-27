@@ -168,8 +168,10 @@ import WebKit
         spaceBlendTask?.cancel()
         guard spaceBlend != nil else { return }
         guard !reducesMotion else { spaceBlend = nil; return }
-        withAnimation(ChocoMotion.space) { spaceBlend?.progress = progress }
         spaceBlendTask = Task { @MainActor [weak self] in
+            // Let the last frame of the swipe land first, so a quick flick still has a colour to ease away from.
+            do { try await Task.sleep(for: .milliseconds(20)) } catch { return }
+            withAnimation(ChocoMotion.space) { self?.spaceBlend?.progress = progress }
             do { try await Task.sleep(for: .milliseconds(360)) } catch { return }
             self?.spaceBlend = nil
         }

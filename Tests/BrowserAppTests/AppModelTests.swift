@@ -92,9 +92,32 @@ import WebKit
         var recognizer = SpaceSwipeRecognizer()
         recognizer.add(dx: 1, dy: 10)
         recognizer.add(dx: -60, dy: 2)
-        #expect(!recognizer.isHorizontal)
+        #expect(recognizer.isVertical && !recognizer.isHorizontal)
         recognizer.reset()
         #expect(recognizer.offset == 0)
+    }
+
+    @Test func verticalDriftDuringASidewaysSwipeIsIgnored() {
+        var recognizer = SpaceSwipeRecognizer()
+        recognizer.add(dx: -12, dy: 1)
+        recognizer.add(dx: -4, dy: 90)
+        #expect(recognizer.isHorizontal)
+        #expect(recognizer.offset == -16)
+    }
+
+    @Test func listsNeverMoveFasterThanTheSpeedLimit() {
+        let frame = 1.0 / 60
+        let step = SpaceSwipeRecognizer.maxSpeed * CGFloat(frame)
+        // A hard flick puts the fingers 500pt away in one frame; the lists get there one capped step at a time.
+        var shown: CGFloat = 0
+        shown = SpaceSwipeRecognizer.follow(shown: shown, target: -500, elapsed: frame)
+        #expect(shown == -step)
+        for _ in 0..<20 { shown = SpaceSwipeRecognizer.follow(shown: shown, target: -500, elapsed: frame) }
+        #expect(shown == -500, "and they do arrive")
+        // A short way is covered in one step without overshooting, either direction.
+        #expect(SpaceSwipeRecognizer.follow(shown: 0, target: 10, elapsed: frame) == 10)
+        #expect(SpaceSwipeRecognizer.follow(shown: 100, target: 60, elapsed: frame) == 60)
+        #expect(SpaceSwipeRecognizer.follow(shown: 0, target: 500, elapsed: frame) == step)
     }
 
     @Test func releaseCommitsPastAThirdOrOnAFlick() {

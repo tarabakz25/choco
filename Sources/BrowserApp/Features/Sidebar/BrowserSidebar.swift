@@ -103,9 +103,14 @@ struct BrowserSidebar: View {
     /// A sideways two-finger swipe over the sidebar drags the lists with the fingers: the neighbouring Space slides in
     /// behind the current one, and pulling past the first or last Space meets resistance.
     private func swipeChanged(_ offset: CGFloat) {
-        // A switch that is already settling finishes first.
-        guard slide.dragging || slide.outgoing == nil else { return }
         slideTask?.cancel()
+        if !slide.dragging, slide.outgoing != nil {
+            // A switch still settling is finished on the spot (its spring is all but done within ~100 ms), so a quick
+            // second swipe starts from rest instead of being ignored.
+            model.clearSpaceBlend()
+            var immediate = Transaction(); immediate.disablesAnimations = true
+            withTransaction(immediate) { slide = SpaceSlide(current: model.state.selectedSpaceID) }
+        }
         let ids = model.state.spaces.map(\.id)
         let selected = model.state.selectedSpaceID
         let step = offset < 0 ? 1 : -1
@@ -137,10 +142,14 @@ struct BrowserSidebar: View {
             if reduceMotion {
                 slide = SpaceSlide(current: target)
             } else {
-                withAnimation(ChocoMotion.space) { slide.progress = 1 }
-                withAnimation(ChocoMotion.spaceListFadeOut) { slide.outgoingOpacity = 0 }
-                withAnimation(ChocoMotion.spaceListFadeIn) { slide.incomingOpacity = 1 }
                 slideTask = Task { @MainActor in
+                    // A quick flick lifts within the frame that drew its first move: let that frame land so the
+                    // animation has somewhere to start from instead of the lists jumping straight to the end.
+                    do { try await Task.sleep(for: .milliseconds(20)) } catch { return }
+                    let remaining = Self.listTravel * (1 - slide.progress)
+                    withAnimation(ChocoMotion.spaceSettle(distance: remaining, maxSpeed: SpaceSwipeRecognizer.maxSpeed)) { slide.progress = 1 }
+                    withAnimation(ChocoMotion.spaceListFadeOut) { slide.outgoingOpacity = 0 }
+                    withAnimation(ChocoMotion.spaceListFadeIn) { slide.incomingOpacity = 1 }
                     do { try await Task.sleep(for: .milliseconds(360)) } catch { return }
                     slide.outgoing = nil
                 }
@@ -155,12 +164,18 @@ struct BrowserSidebar: View {
         guard !reduceMotion else { slide = settled; return }
         let hasNeighbour = slide.outgoing != nil
         slide.dragging = false
-        withAnimation(ChocoMotion.space) {
-            slide.rubber = 0
-            if hasNeighbour { slide.progress = 0 }
-        }
-        withAnimation(ChocoMotion.spaceListFadeOut) { slide.outgoingOpacity = 1; slide.incomingOpacity = 0 }
         slideTask = Task { @MainActor in
+            do { try await Task.sleep(for: .milliseconds(20)) } catch { return }
+            let pulled = hasNeighbour ? Self.listTravel * slide.progress : abs(slide.rubber)
+            withAnimation(ChocoMotion.spaceSettle(distance: pulled, maxSpeed: SpaceSwipeRecognizer.maxSpeed)) {
+                slide.rubber = 0
+                if hasNeighbour { slide.progress = 0 }
+            }
+            // Only a neighbouring list fades back. At the first or last Space the one list on show is `incoming`, and
+            // fading it would make the list vanish and pop back after the pull.
+            if hasNeighbour {
+                withAnimation(ChocoMotion.spaceListFadeOut) { slide.outgoingOpacity = 1; slide.incomingOpacity = 0 }
+            }
             do { try await Task.sleep(for: .milliseconds(360)) } catch { return }
             var immediate = Transaction(); immediate.disablesAnimations = true
             withTransaction(immediate) { slide = settled }
