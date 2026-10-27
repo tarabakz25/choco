@@ -16,6 +16,7 @@ enum DesignResources {
 /// Figma SVGs are retained unmodified and converted losslessly to PDF for AppKit.
 struct DesignIcon: View {
     let name: String
+    /// Size in Figma points; `ChocoSpace.scale` is applied on display.
     let size: CGFloat
 
     init(_ name: String, size: CGFloat = 16) {
@@ -23,13 +24,15 @@ struct DesignIcon: View {
         self.size = size
     }
 
+    private var side: CGFloat { ChocoSpace.u(size) }
+
     var body: some View {
         if let image = Self.image(named: name) {
             Image(nsImage: image).resizable().renderingMode(.original)
-                .aspectRatio(contentMode: .fit).frame(width: size, height: size)
+                .aspectRatio(contentMode: .fit).frame(width: side, height: side)
                 .accessibilityHidden(true)
         } else {
-            Color.clear.frame(width: size, height: size).accessibilityHidden(true)
+            Color.clear.frame(width: side, height: side).accessibilityHidden(true)
         }
     }
 

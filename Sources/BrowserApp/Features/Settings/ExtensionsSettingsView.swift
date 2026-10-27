@@ -14,19 +14,19 @@ struct ExtensionsSettingsView: View {
     private var manager: ExtensionManager { model.extensions }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: ChocoSpace.u(14)) {
             Text("Chrome拡張機能（Manifest V2 / V3）を追加できます。拡張機能はすべてのProfileで有効になり、ページの表示や通信に干渉できます。信頼できるものだけを追加してください。")
                 .font(ChocoTheme.font(12)).foregroundStyle(SettingsStyle.secondary)
                 .fixedSize(horizontal: false, vertical: true)
             installedList
-            HStack(spacing: 6) {
+            HStack(spacing: ChocoSpace.u(6)) {
                 Button("フォルダ・ZIP・CRXから追加…") { chooseFile() }.buttonStyle(SettingsButtonStyle())
                     .disabled(isWorking).accessibilityIdentifier("extensions-add-file")
                 Spacer(minLength: 0)
             }
-            HStack(spacing: 6) {
+            HStack(spacing: ChocoSpace.u(6)) {
                 TextField("ChromeウェブストアのURLまたは拡張機能ID", text: $storeReference)
-                    .textFieldStyle(.plain).padding(.horizontal, 8).frame(height: 24)
+                    .textFieldStyle(.plain).padding(.horizontal, ChocoSpace.u(8)).frame(height: ChocoSpace.u(24))
                     .background(SettingsStyle.field, in: RoundedRectangle(cornerRadius: 6))
                     .onSubmit { addFromStore() }
                     .accessibilityIdentifier("extensions-store-field")
@@ -44,7 +44,7 @@ struct ExtensionsSettingsView: View {
                 .font(ChocoTheme.font(11)).foregroundStyle(SettingsStyle.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(.horizontal, 64).padding(.top, 20)
+        .padding(.horizontal, ChocoSpace.u(64)).padding(.top, ChocoSpace.u(20))
         .confirmationDialog("拡張機能を削除しますか？", isPresented: Binding(get: { pendingRemoval != nil }, set: { if !$0 { pendingRemoval = nil } }),
                             presenting: pendingRemoval) { item in
             Button("「\(item.name)」を削除", role: .destructive) { Task { await manager.remove(item.id) } }
@@ -55,15 +55,15 @@ struct ExtensionsSettingsView: View {
         VStack(spacing: 0) {
             if manager.installed.isEmpty {
                 Text("追加された拡張機能はありません").foregroundStyle(SettingsStyle.secondary)
-                    .frame(maxWidth: .infinity, minHeight: 80)
+                    .frame(maxWidth: .infinity, minHeight: ChocoSpace.u(80))
             } else {
                 ScrollView {
                     VStack(spacing: 0) {
                         ForEach(manager.installed) { item in
                             row(item, divider: item.id != manager.installed.last?.id)
                         }
-                    }.padding(.horizontal, 10)
-                }.frame(maxHeight: 300)
+                    }.padding(.horizontal, ChocoSpace.u(10))
+                }.frame(maxHeight: ChocoSpace.u(300))
             }
         }
         .background(SettingsStyle.card, in: RoundedRectangle(cornerRadius: 8))
@@ -73,7 +73,7 @@ struct ExtensionsSettingsView: View {
 
     private func row(_ item: InstalledExtension, divider: Bool) -> some View {
         SettingsRow(item.name, divider: divider) {
-            HStack(spacing: 8) {
+            HStack(spacing: ChocoSpace.u(8)) {
                 if let error = manager.loadErrors[item.id] {
                     Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Color(hex: "FFB340")).help(error)
                 }
