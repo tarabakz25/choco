@@ -325,7 +325,6 @@ struct BrowserSidebar: View {
                 Text("新しいタブ").font(ChocoTheme.font(13, weight: .medium)).opacity(isSpaceEmpty ? 0.72 : 1)
                 Spacer(minLength: 0)
             }.padding(.horizontal, 10).frame(height: 32).contentShape(Rectangle())
-                .background(isSpaceEmpty ? Color.clear : ChocoTheme.selected, in: RoundedRectangle(cornerRadius: 8))
         }.buttonStyle(ChocoPressStyle(radius: 8)).help("新しいタブ (⌘T)").accessibilityIdentifier("new-tab")
     }
 
