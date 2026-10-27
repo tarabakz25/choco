@@ -1,26 +1,33 @@
 import SwiftUI
 
-/// Interactive timings extracted from the supplied Figma motion tracks.
-/// The sidebar uses its 350 ms active segment, without the demo's pre-roll or loop.
+/// Interactive timings from DESIGN.md §11. Opening and moving things uses the Figma spring (stiffness 420, damping 28,
+/// sampled in `FigmaSpringCurve`); closing and hiding uses `cubic-bezier(0.2, 0.8, 0.2, 1)`.
 enum ChocoMotion {
-    static let sidebar = Animation(FigmaSampledSpring(duration: 0.35))
+    private static func ease(_ duration: Double) -> Animation { .timingCurve(0.2, 0.8, 0.2, 1, duration: duration) }
+
+    /// Sidebar shown again or peeked: 300 ms spring. Hidden: 200 ms ease.
+    static let sidebarShow = Animation(FigmaSampledSpring(duration: 0.3))
+    static let sidebarHide = ease(0.2)
+    static func sidebar(presented: Bool) -> Animation { presented ? sidebarShow : sidebarHide }
     static let sidebarOpacity = Animation.easeOut(duration: 0.2)
     static let siteEntry = Animation(FigmaSampledSpring(duration: 0.32)).delay(0.05)
-    static let siteOpacity = Animation.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.14).delay(0.05)
+    static let siteOpacity = ease(0.14).delay(0.05)
+    /// Space switch: 320 ms spring (the window colour mode and the page area follow it).
+    static let space = Animation(FigmaSampledSpring(duration: 0.32))
 
     /// New menu (149:7410): 280 ms spring for the panel and the plus-to-x rotation; opacity 140 ms;
     /// rows follow 40 ms later, 30 ms apart, fading over 140 ms and rising 4pt over 200 ms.
     static let newMenuEntry = Animation(FigmaSampledSpring(duration: 0.28))
-    static let newMenuOpacity = Animation.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.14)
+    static let newMenuOpacity = ease(0.14)
     static func newMenuRowOpacity(_ index: Int) -> Animation { newMenuOpacity.delay(0.04 + 0.03 * Double(index)) }
-    static func newMenuRowRise(_ index: Int) -> Animation {
-        .timingCurve(0.2, 0.8, 0.2, 1, duration: 0.2).delay(0.04 + 0.03 * Double(index))
-    }
+    static func newMenuRowRise(_ index: Int) -> Animation { ease(0.2).delay(0.04 + 0.03 * Double(index)) }
 
-    // The design has no command or dismissal track. These short, related
-    // defaults implement the requested interactive transitions.
-    static let command = Animation.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.14)
-    static let dismiss = Animation.easeOut(duration: 0.14)
+    /// Command bar: opens with a 320 ms spring, closes with a 160 ms ease.
+    static let commandOpen = Animation(FigmaSampledSpring(duration: 0.32))
+    static let commandClose = ease(0.16)
+    static func command(presented: Bool) -> Animation { presented ? commandOpen : commandClose }
+    /// Site controls and the new menu closing: 160 ms ease.
+    static let dismiss = ease(0.16)
     /// Favorites tiles making room for a dragged tab, and settling it into its slot.
     static let favoriteReflow = Animation.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.22)
     static let tabLifecycle = Animation.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.18)

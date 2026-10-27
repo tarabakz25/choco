@@ -165,7 +165,7 @@ import WebKit
     func session(for tab: BrowserTab) -> WebSession {
         guard let space = state.spaces.first(where: { $0.id == tab.spaceID }) else { preconditionFailure("A tab must belong to a Space") }
         let restoring = pool.existing(id: tab.id) == nil ? pageScroll(for: tab.id) : nil
-        hibernatedTabIDs.remove(tab.id)
+        wakeFromHibernation(tab.id)
         let session = pool.session(id: tab.id, profileID: space.profileID, initialURL: URL(string: tab.url), restoreScroll: restoring)
         mountedProfiles[tab.id] = space.profileID
         if knownURLs[tab.id] == nil { knownURLs[tab.id] = tab.url }
@@ -261,7 +261,7 @@ import WebKit
         if let focusedPaneID, !visibleTabIDs.contains(focusedPaneID) { self.focusedPaneID = navigationTabID }
         recentTabIDs.removeAll { !validTabs.contains($0) }
         let validRuntimes = validTabs.union(favoriteSessions.values)
-        hibernatedTabIDs.formIntersection(validTabs)
+        if !hibernatedTabIDs.isSubset(of: validTabs) { hibernatedTabIDs.formIntersection(validTabs) }
         hibernatedFavoriteSessionIDs.formIntersection(Set(favoriteSessions.values))
         let memoryIDs = Set(lastInteraction.keys).union(scrollAnchors.keys).union(activityFlags.keys)
         for id in memoryIDs where !validRuntimes.contains(id) { clearHibernationMemory(id) }
@@ -386,7 +386,7 @@ import WebKit
             else { hibernatedFavoriteSessionIDs.insert(id) }
         }
         for id in plan.wakeIDs {
-            hibernatedTabIDs.remove(id)
+            wakeFromHibernation(id)
             hibernatedFavoriteSessionIDs.remove(id)
         }
         scrollAnchors = ScrollAnchorBudget.trimmed(scrollAnchors, maxCount: ScrollAnchorBudget.defaultMaxCount)
@@ -483,11 +483,17 @@ import WebKit
         return PageScrollOffset(x: anchor.x, y: anchor.y)
     }
 
+    /// `session(for:)` runs while the sidebar draws, so a write to this observed set must only happen when it
+    /// changes: even a no-op `remove` counts as a mutation, which invalidates the view and loops the draw.
+    private func wakeFromHibernation(_ id: UUID) {
+        if hibernatedTabIDs.contains(id) { hibernatedTabIDs.remove(id) }
+    }
+
     private func clearHibernationMemory(_ id: UUID) {
         lastInteraction[id] = nil
         scrollAnchors[id] = nil
         activityFlags[id] = nil
-        hibernatedTabIDs.remove(id)
+        wakeFromHibernation(id)
         hibernatedFavoriteSessionIDs.remove(id)
     }
 

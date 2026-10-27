@@ -40,9 +40,7 @@ struct SettingsWindowTitle: NSViewRepresentable {
                         fill.bottomAnchor.constraint(equalTo: titlebar.bottomAnchor)
                     ])
                     let label = NSTextField(labelWithString: settingsTitle)
-                    label.font = NSFont(descriptor: NSFontDescriptor(fontAttributes: [
-                        .family: "Inter", .traits: [NSFontDescriptor.TraitKey.weight: NSFont.Weight.bold.rawValue]
-                    ]), size: 13)
+                    label.font = .systemFont(ofSize: 13, weight: .bold)
                     label.textColor = NSColor(white: 0.84, alpha: 1)
                     label.setAccessibilityElement(false)
                     label.translatesAutoresizingMaskIntoConstraints = false

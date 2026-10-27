@@ -1,0 +1,9 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Icon/planet">
+<circle id="Ellipse" cx="8" cy="8" r="4" fill="white"/>
+<mask id="stroke0_0_36" fill="white">
+<path d="M14.7973 11.1696C14.2138 12.421 10.6975 12.0163 6.94345 10.2658C3.1894 8.51523 0.619178 6.08171 1.20269 4.83036C1.78621 3.57901 5.3025 3.98369 9.05655 5.73423C12.8106 7.48477 15.3808 9.91829 14.7973 11.1696Z"/>
+</mask>
+<path id="Ellipse_2" d="M14.7973 11.1696C14.2138 12.421 10.6975 12.0163 6.94345 10.2658C3.1894 8.51523 0.619178 6.08171 1.20269 4.83036C1.78621 3.57901 5.3025 3.98369 9.05655 5.73423C12.8106 7.48477 15.3808 9.91829 14.7973 11.1696Z" stroke-width="2.4" stroke="white" mask="url(#stroke0_0_36)"/>
+</g>
+</svg>

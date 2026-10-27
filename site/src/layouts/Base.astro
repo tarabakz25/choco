@@ -1,0 +1,39 @@
+---
+import '../styles/global.css';
+import { dictionaries, type Locale } from '../i18n';
+import { SITE_URL } from '../config';
+import { url } from '../utils';
+
+interface Props { locale: Locale }
+const { locale } = Astro.props;
+const t = dictionaries[locale];
+const canonical = `${SITE_URL}/${locale === 'ja' ? '' : 'en/'}`;
+---
+<!doctype html>
+<html lang={t.htmlLang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{t.title}</title>
+    <meta name="description" content={t.description} />
+    <meta name="theme-color" content="#1e1e1f" />
+    <link rel="icon" href={url('icon.png')} />
+    <link rel="canonical" href={canonical} />
+    <link rel="alternate" hreflang="ja" href={`${SITE_URL}/`} />
+    <link rel="alternate" hreflang="en" href={`${SITE_URL}/en/`} />
+    <link rel="preload" href={url('fonts/Inter.ttf')} as="font" type="font/ttf" crossorigin />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={t.title} />
+    <meta property="og:description" content={t.description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={`${SITE_URL}/og.png`} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script is:inline>document.documentElement.classList.add('js');</script>
+  </head>
+  <body class="min-h-dvh overflow-x-clip antialiased">
+    <slot />
+    <script>
+      import '../scripts/page';
+    </script>
+  </body>
+</html>
