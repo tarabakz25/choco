@@ -29,10 +29,9 @@ struct BrowserSidebar: View {
             addressField
             ScrollView(.vertical, showsIndicators: false) {
                 VStack(alignment: .leading, spacing: ChocoSpace.u(6)) {
-                    // Figma's Space lists (162:7390) lead with the Space name; the empty Space labels itself below.
-                    if !isSpaceEmpty { spaceNameLabel }
+                    // The Space name always sits below the favorites (or their empty hint), never above them.
                     if model.state.favorites.isEmpty && !hidesFavoritesHint { favoritesEmpty } else { favorites }
-                    if isSpaceEmpty { spaceNameLabel }
+                    spaceNameLabel
                     pinnedTabs
                     if !isSpaceEmpty { clearDivider }
                     newTabButton
@@ -189,7 +188,7 @@ struct BrowserSidebar: View {
         .accessibilityIdentifier("favorites-empty")
     }
 
-    /// Figma `Space Name` (156:1704): 28pt row labelling an otherwise empty Space.
+    /// Figma `Space Name` (156:1704): 28pt row below the favorites.
     private var spaceNameLabel: some View {
         Text(model.selectedSpace?.name ?? "")
             .font(ChocoTheme.font(11, weight: .semibold)).foregroundStyle(ChocoTheme.tertiary).lineLimit(1)
