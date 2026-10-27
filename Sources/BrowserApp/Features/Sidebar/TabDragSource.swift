@@ -10,6 +10,8 @@ struct TabDragSource: NSViewRepresentable {
     let tab: BrowserTab
     let onPress: (Bool) -> Void
     let onClick: () -> Void
+    /// Width of the row's trailing strip that stays with SwiftUI (the hover-only close button).
+    var passthroughTrailing: CGFloat = 0
 
     func makeNSView(context: Context) -> TabDragSourceView {
         let view = TabDragSourceView()
@@ -21,6 +23,7 @@ struct TabDragSource: NSViewRepresentable {
 
     private func configure(_ view: TabDragSourceView) {
         view.model = model; view.tab = tab; view.onPress = onPress; view.onClick = onClick
+        view.passthroughTrailing = passthroughTrailing
     }
 }
 
@@ -29,6 +32,7 @@ struct TabDragSource: NSViewRepresentable {
     var tab: BrowserTab?
     var onPress: (Bool) -> Void = { _ in }
     var onClick: () -> Void = {}
+    var passthroughTrailing: CGFloat = 0
     private var mouseDownEvent: NSEvent?
     private var morph: DragImageMorph?
 
@@ -38,11 +42,12 @@ struct TabDragSource: NSViewRepresentable {
     override func isAccessibilityElement() -> Bool { false }
 
     /// Only the plain left button belongs to this view; right-click and hover reach the SwiftUI row beneath
-    /// (its context menu and highlight).
+    /// (its context menu and highlight), as does the trailing strip that holds the close button.
     override func hitTest(_ point: NSPoint) -> NSView? {
         guard let event = NSApp.currentEvent,
               [.leftMouseDown, .leftMouseDragged, .leftMouseUp].contains(event.type),
               !event.modifierFlags.contains(.control) else { return nil }
+        if passthroughTrailing > 0, convert(point, from: superview).x > bounds.width - passthroughTrailing { return nil }
         return super.hitTest(point)
     }
 
