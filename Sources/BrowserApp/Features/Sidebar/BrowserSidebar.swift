@@ -86,10 +86,9 @@ struct BrowserSidebar: View {
     private func spaceList(_ spaceID: UUID) -> some View {
         let isEmpty = isSpaceEmpty(spaceID)
         return VStack(alignment: .leading, spacing: ChocoSpace.u(6)) {
-            // Figma's Space lists (162:7390) lead with the Space name; the empty Space labels itself below.
-            if !isEmpty { spaceNameLabel(spaceID) }
+            // The Space name sits below the favorites, whether they are tiles or the empty hint.
             if model.state.favorites.isEmpty && !hidesFavoritesHint { favoritesEmpty } else { favorites }
-            if isEmpty { spaceNameLabel(spaceID) }
+            spaceNameLabel(spaceID)
             pinnedTabs(in: spaceID)
             if !isEmpty { clearDivider(in: spaceID) }
             newTabButton
@@ -326,7 +325,7 @@ struct BrowserSidebar: View {
         .accessibilityIdentifier("favorites-empty")
     }
 
-    /// Figma `Space Name` (156:1704): 28pt row labelling an otherwise empty Space.
+    /// Figma `Space Name` (156:1704): 28pt row under the favorites that labels the Space.
     private func spaceNameLabel(_ spaceID: UUID) -> some View {
         Text(model.state.spaces.first { $0.id == spaceID }?.name ?? "")
             .font(ChocoTheme.font(11, weight: .semibold)).foregroundStyle(theme.label).lineLimit(1)
@@ -368,10 +367,7 @@ struct BrowserSidebar: View {
             }
         }
         .animation(reduceMotion ? nil : ChocoMotion.favoriteReflow, value: favoriteCells)
-        // The delegate reads the pointer in the grid's own space, so it sits before any padding.
         .onDrop(of: [.plainText], delegate: FavoriteDropDelegate(model: model, tracksSlot: true, animation: reduceMotion ? nil : ChocoMotion.favoriteReflow, targeted: $favoritesDropTargeted))
-        // Figma leaves 12pt between the tiles and the folder row; the stack already adds 6.
-        .padding(.bottom, ChocoSpace.u(6))
     }
 
     private func pinnedTabs(in spaceID: UUID) -> some View {
