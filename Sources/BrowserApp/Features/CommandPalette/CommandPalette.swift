@@ -70,7 +70,7 @@ struct CommandPalette: View {
                 Label(error, systemImage: "exclamationmark.circle")
                     .font(ChocoTheme.font(11)).foregroundStyle(Color(red: 1, green: 0.67, blue: 0.63))
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 18).padding(.bottom, 10)
+                    .padding(.horizontal, ChocoSpace.u(18)).padding(.bottom, ChocoSpace.u(10))
                     .accessibilityIdentifier("command-error")
             }
             Rectangle().fill(Color(hex: "353535")).frame(height: 1)
@@ -97,13 +97,13 @@ struct CommandPalette: View {
                     }
                 }
                 .scrollIndicators(.hidden)
-                .frame(height: CGFloat(Self.visibleRows) * 43 - 1)
+                .frame(height: CGFloat(Self.visibleRows) * (ChocoSpace.u(42) + 1) - 1)
                 .onChange(of: selection) { _, value in proxy.scrollTo(value, anchor: .center) }
             }
-            .padding(.horizontal, 6).padding(.top, 6).padding(.bottom, 8)
+            .padding(.horizontal, ChocoSpace.u(6)).padding(.top, ChocoSpace.u(6)).padding(.bottom, ChocoSpace.u(8))
         }
         .padding(1)
-        .frame(width: 668)
+        .frame(width: ChocoSpace.u(668))
         .foregroundStyle(ChocoTheme.text)
         .background(ChocoTheme.command, in: RoundedRectangle(cornerRadius: 10))
         .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(ChocoTheme.commandBorder, lineWidth: 1))
@@ -125,7 +125,7 @@ struct CommandPalette: View {
     }
 
     private var input: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: ChocoSpace.u(10)) {
             DesignIcon("9d9ff", size: 14).opacity(0.8)
             TextField("検索、またはURLを入力…", text: $model.commandText,
                       prompt: Text("検索、またはURLを入力…").foregroundStyle(Color(hex: "8C8C8C")))
@@ -149,7 +149,7 @@ struct CommandPalette: View {
                 }
             Button { showsInputHelp.toggle() } label: {
                 DesignIcon("832a0", size: 16).opacity(0.85)
-                    .frame(width: 22, height: 22).background(.black, in: Circle())
+                    .frame(width: ChocoSpace.u(22), height: ChocoSpace.u(22)).background(.black, in: Circle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel("コマンドバーの使い方")
@@ -159,10 +159,10 @@ struct CommandPalette: View {
                     Text("↑↓で選択、Returnで実行、Escapeで閉じます。")
                     Text("⌘Lは現在のページを開き、⌘Tは新しいタブを作成します。")
                     Text("別のSpaceのタブへの切り替えは、候補から選択してください。")
-                }.font(ChocoTheme.font(11)).padding(ChocoSpace.lg).frame(width: 300, alignment: .leading)
+                }.font(ChocoTheme.font(11)).padding(ChocoSpace.lg).frame(width: ChocoSpace.u(300), alignment: .leading)
             }
         }
-        .padding(.leading, 18).padding(.trailing, 14).frame(height: 52)
+        .padding(.leading, ChocoSpace.u(18)).padding(.trailing, ChocoSpace.u(14)).frame(height: ChocoSpace.u(52))
     }
 
     @ViewBuilder private func resultButton(_ result: Result, index: Int) -> some View {
@@ -189,26 +189,26 @@ struct CommandPalette: View {
         case "plus", "plus.square": DesignIcon("77a3c", size: 16)
         case "archivebox": DesignIcon("61b66", size: 16)
         case "sidebar.left": DesignIcon("de36e", size: 16)
-        default: Image(systemName: symbol).font(.system(size: 14)).frame(width: 16, height: 16)
+        default: Image(systemName: symbol).font(.system(size: ChocoSpace.u(14))).frame(width: ChocoSpace.u(16), height: ChocoSpace.u(16))
         }
     }
 
     private func resultRow<Icon: View>(title: String, action: String, selected: Bool, @ViewBuilder icon: () -> Icon) -> some View {
-        HStack(spacing: 10) {
-            icon().frame(width: 16, height: 16)
+        HStack(spacing: ChocoSpace.u(10)) {
+            icon().frame(width: ChocoSpace.u(16), height: ChocoSpace.u(16))
             Text(title).font(ChocoTheme.font(13, weight: .semibold)).lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
             HStack(spacing: ChocoSpace.sm) {
                 Text(action).font(ChocoTheme.font(12, weight: .semibold))
                     .foregroundStyle(selected ? Color(hex: "F2F2F2") : Color(hex: "6E6E6E"))
-                    .lineLimit(1).frame(maxWidth: 180, alignment: .trailing)
+                    .lineLimit(1).frame(maxWidth: ChocoSpace.u(180), alignment: .trailing)
                 DesignIcon(selected ? "85a6a" : "caa3a", size: 14)
                     .opacity(selected ? 1 : 0.6)
-                    .frame(width: 22, height: 22)
+                    .frame(width: ChocoSpace.u(22), height: ChocoSpace.u(22))
                     .background(selected ? .white : Color(hex: "2E2E2F"), in: RoundedRectangle(cornerRadius: 4))
             }
         }
-        .padding(.leading, 10).padding(.trailing, 6).frame(height: 42)
+        .padding(.leading, ChocoSpace.u(10)).padding(.trailing, ChocoSpace.u(6)).frame(height: ChocoSpace.u(42))
         .foregroundStyle(Color(hex: "F2F2F2"))
         .background(selected ? ChocoTheme.commandSelected : .clear, in: RoundedRectangle(cornerRadius: 8))
         .contentShape(RoundedRectangle(cornerRadius: 8))

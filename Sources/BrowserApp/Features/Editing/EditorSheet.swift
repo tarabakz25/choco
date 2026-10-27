@@ -24,7 +24,7 @@ struct EditorSheet: View {
     private let colors = ["8D83C9", "6F9C91", "C08A79", "719CC0", "A38B60", "B87594"]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: ChocoSpace.u(20)) {
             Text(heading).font(.title2.weight(.semibold))
             Form {
                 TextField(isURLOnly ? l10n.text("Pinned URL") : l10n.text("Name"), text: isURLOnly ? $address : $name)
@@ -39,7 +39,7 @@ struct EditorSheet: View {
                         Spacer()
                         ForEach(colors, id: \.self) { candidate in
                             Button { color = candidate } label: {
-                                Circle().fill(Color(hex: candidate)).frame(width: 24, height: 24)
+                                Circle().fill(Color(hex: candidate)).frame(width: ChocoSpace.u(24), height: ChocoSpace.u(24))
                                     .overlay { if color == candidate { Image(systemName: "checkmark").font(.caption.bold()).foregroundStyle(.white) } }
                             }.buttonStyle(.plain).accessibilityLabel(l10n.format("Color %@", candidate))
                         }
@@ -55,7 +55,7 @@ struct EditorSheet: View {
                 Button(l10n.text("Cancel")) { dismiss() }.keyboardShortcut(.cancelAction)
                 Button(l10n.text("Save")) { save() }.keyboardShortcut(.defaultAction).buttonStyle(.borderedProminent).accessibilityIdentifier("editor-save")
             }
-        }.padding(ChocoSpace.xl).frame(width: 470)
+        }.padding(ChocoSpace.xl).frame(width: ChocoSpace.u(470))
             .onAppear { load(); focused = true }
     }
 

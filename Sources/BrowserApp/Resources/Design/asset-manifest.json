@@ -949,6 +949,160 @@
         "viewBox": "0 0 12 6"
       },
       "bytes": 412
+    },
+    "efd4c.svg": {
+      "aliases": [
+        "components-reference:imgIconPlanet"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 816
+    },
+    "2f545.svg": {
+      "aliases": [
+        "components-reference:imgIconPlay"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 352
+    },
+    "ff17e.svg": {
+      "aliases": [
+        "components-reference:imgIconFile"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 853
+    },
+    "8c213.svg": {
+      "aliases": [
+        "components-reference:imgIconRestore"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 848
+    },
+    "a38c1.svg": {
+      "aliases": [
+        "components-reference:imgIconTrash"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 727
+    },
+    "7f2ec.svg": {
+      "aliases": [
+        "components-reference:imgIconArchive"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 929
+    },
+    "17ee5.svg": {
+      "aliases": [
+        "components-reference:imgIconSpaces"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 1536
+    },
+    "0f830.svg": {
+      "aliases": [
+        "components-reference:imgIconEasels"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 734
+    },
+    "6f20d.svg": {
+      "aliases": [
+        "components-reference:imgIconDownloads"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 668
+    },
+    "82283.svg": {
+      "aliases": [
+        "components-reference:imgIconSettings"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 3052
+    },
+    "72336.svg": {
+      "aliases": [
+        "components-reference:imgIconCapture"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 1433
+    },
+    "6b394.svg": {
+      "aliases": [
+        "components-reference:imgIconCamera"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 1022
+    },
+    "c593a.svg": {
+      "aliases": [
+        "components-reference:imgIconBoost"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 1388
+    },
+    "98f70.svg": {
+      "aliases": [
+        "components-reference:imgIconClose"
+      ],
+      "dimensions": {
+        "width": "16",
+        "height": "16",
+        "viewBox": "0 0 16 16"
+      },
+      "bytes": 428
     }
   }
 }

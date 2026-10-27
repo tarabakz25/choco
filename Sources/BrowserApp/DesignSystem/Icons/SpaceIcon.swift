@@ -14,7 +14,7 @@ struct SpaceIcon: View {
         if value.isEmpty || value == "🌐" || value == "◉" {
             if let image = DesignIcon.image(named: "material-language") {
                 Image(nsImage: image).resizable().renderingMode(.template)
-                    .aspectRatio(contentMode: .fit).frame(width: size, height: size)
+                    .aspectRatio(contentMode: .fit).frame(width: ChocoSpace.u(size), height: ChocoSpace.u(size))
                     .foregroundStyle(ChocoTheme.text).accessibilityHidden(true)
             }
         } else {
