@@ -26,6 +26,7 @@ import SwiftUI
         window.isReleasedWhenClosed = false
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
+        TrafficLightInset.install(on: window, inset: 6, scale: ChocoSpace.scale)
         window.backgroundColor = NSColor(red: 94 / 255, green: 92 / 255, blue: 92 / 255, alpha: 1)
         window.contentMinSize = NSSize(width: 480, height: 320)
         window.title = tab.displayTitle
@@ -68,7 +69,7 @@ private struct DetachedTabView: View {
     let onTitleChange: (String) -> Void
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: ChocoSpace.u(6)) {
             toolbar
             ZStack {
                 ChocoTheme.content
@@ -79,7 +80,7 @@ private struct DetachedTabView: View {
                         Text("ページを開けませんでした").font(.headline)
                         Text(message).font(.callout).foregroundStyle(.secondary).textSelection(.enabled)
                         Button("再試行") { session.reload() }.buttonStyle(.borderedProminent)
-                    }.padding(30).frame(maxWidth: 480)
+                    }.padding(ChocoSpace.u(30)).frame(maxWidth: ChocoSpace.u(480))
                         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
                 }
             }
@@ -104,27 +105,27 @@ private struct DetachedTabView: View {
         HStack(spacing: 0) {
             // The native traffic lights sit here; the window draws none of its own.
             Color.clear.frame(width: 76, height: 12).accessibilityHidden(true)
-            Button { session.goBack() } label: { DesignIcon("687ab", size: 16).opacity(0.62).frame(width: 28, height: 28) }
+            Button { session.goBack() } label: { DesignIcon("687ab", size: 16).opacity(0.62).frame(width: ChocoSpace.u(28), height: 28) }
                 .disabled(!session.canGoBack).help("戻る").accessibilityLabel("戻る")
-            Button { session.goForward() } label: { DesignIcon("caa3a", size: 16).opacity(0.62).frame(width: 28, height: 28) }
+            Button { session.goForward() } label: { DesignIcon("caa3a", size: 16).opacity(0.62).frame(width: ChocoSpace.u(28), height: 28) }
                 .disabled(!session.canGoForward).help("進む").accessibilityLabel("進む")
             Button { session.isLoading ? session.stop() : session.reload() } label: {
-                DesignIcon("108be", size: 16).opacity(0.62).frame(width: 28, height: 28)
+                DesignIcon("108be", size: 16).opacity(0.62).frame(width: ChocoSpace.u(28), height: 28)
             }
             .help(session.isLoading ? "読み込みを中止" : "再読み込み")
             .accessibilityLabel(session.isLoading ? "読み込みを中止" : "再読み込み")
-            HStack(spacing: 6) {
+            HStack(spacing: ChocoSpace.u(6)) {
                 SiteIcon(url: session.url?.absoluteString ?? "", size: 13)
                 Text(address).font(ChocoTheme.font(13)).foregroundStyle(ChocoTheme.secondary)
                     .lineLimit(1).truncationMode(.tail)
                 Spacer(minLength: 0)
             }
-            .padding(.horizontal, 10).frame(height: 28)
+            .padding(.horizontal, ChocoSpace.u(10)).frame(height: ChocoSpace.u(28))
             .background(ChocoTheme.field, in: RoundedRectangle(cornerRadius: 8))
             .padding(.leading, ChocoSpace.sm).padding(.trailing, ChocoSpace.sm)
         }
         .buttonStyle(ChocoPressStyle())
-        .padding(.leading, 6)
+        .padding(.leading, ChocoSpace.u(6))
         .frame(height: 28)
         .padding(.top, 6)
     }

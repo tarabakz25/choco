@@ -49,7 +49,7 @@ struct BrowserWindow: View {
                     onEntered: { edgeHovered = true; revealSidebar() },
                     onExited: { edgeHovered = false; schedulePeekDismissal() }
                 )
-                .frame(width: 10, height: geometry.size.height)
+                .frame(width: ChocoSpace.u(10), height: geometry.size.height)
                 .accessibilityHidden(true)
 
                 hiddenSidebarControls
@@ -82,7 +82,7 @@ struct BrowserWindow: View {
                     SiteControlsView(model: model)
                         .frame(width: ChocoTheme.siteControlsWidth)
                         .fixedSize(horizontal: false, vertical: true)
-                        .offset(x: min(max(8, rect.maxX - 120), geometry.size.width - 228), y: rect.maxY + 4)
+                        .offset(x: min(max(8, rect.maxX - ChocoSpace.u(120)), geometry.size.width - ChocoSpace.u(228)), y: rect.maxY + ChocoSpace.u(7))
                         // SiteControlsView owns its Figma entry spring/fade. Only
                         // removal gets an outer transition, so entry isn't doubled.
                         .transition(.asymmetric(insertion: .identity, removal: .opacity))
@@ -102,14 +102,14 @@ struct BrowserWindow: View {
                     NewMenuView(model: model)
                         .fixedSize()
                         .position(x: max(NewMenuView.width / 2 + 8, rect.maxX - NewMenuView.width / 2),
-                                  y: rect.minY - 14 - 129)
+                                  y: rect.minY - ChocoSpace.u(14) - ChocoSpace.u(129))
                         .transition(.asymmetric(insertion: .identity, removal: .opacity))
                         .accessibilityElement(children: .contain)
                 }
             }
             .animation(reduceMotion ? nil : ChocoMotion.dismiss, value: model.showsNewMenu)
         }
-        .frame(minWidth: 760, minHeight: 500)
+        .frame(minWidth: 960, minHeight: 600)
         .background(ChocoTheme.sidebar)
         .background(WindowReference { window in
             model.browserWindow = window
@@ -190,7 +190,7 @@ struct BrowserWindow: View {
                     HStack {
                         Image(systemName: "arrow.down.circle")
                         Text("ダウンロード中 · \(session.activeDownloadCount)件")
-                        if let progress = session.downloadProgress { ProgressView(value: progress).frame(width: 100) }
+                        if let progress = session.downloadProgress { ProgressView(value: progress).frame(width: ChocoSpace.u(100)) }
                         Spacer()
                     }.font(ChocoTheme.font(11)).foregroundStyle(.secondary).padding(ChocoSpace.sm)
                 }
@@ -212,7 +212,7 @@ struct BrowserWindow: View {
 
     private func sidebarChrome(height: CGFloat) -> some View {
         BrowserSidebar(model: model)
-            .frame(width: sidebarWidth, height: max(0, height - (floatingSidebar ? 12 : 0)))
+            .frame(width: sidebarWidth, height: max(0, height - (floatingSidebar ? ChocoSpace.u(12) : 0)))
             .background(ChocoTheme.sidebar)
             .clipShape(RoundedRectangle(cornerRadius: floatingSidebar ? 10 : 0))
             .overlay {
@@ -251,12 +251,12 @@ struct BrowserWindow: View {
 
     private var hiddenSidebarControls: some View {
         Button { model.send(.toggleSidebar) } label: {
-            DesignIcon("de36e", size: 16).frame(width: 28, height: 28)
+            DesignIcon("de36e", size: 16).frame(width: ChocoSpace.u(28), height: ChocoSpace.u(28))
                 .background(ChocoTheme.sidebar.opacity(0.95), in: RoundedRectangle(cornerRadius: 6))
         }
         .buttonStyle(ChocoPressStyle()).help("サイドバーを表示 (⌘S)")
         .accessibilityLabel("サイドバーを表示").accessibilityIdentifier("show-sidebar")
-        .padding(.leading, ChocoSpace.lg).padding(.top, 14)
+        .padding(.leading, ChocoSpace.lg).padding(.top, 28 - ChocoSpace.u(28) / 2) // keeps the button centred where the native traffic lights are
     }
 
     private var commandLayer: some View {
@@ -270,7 +270,7 @@ struct BrowserWindow: View {
                         .accessibilityHidden(true)
                         .transition(.opacity)
                     CommandPalette(model: model)
-                        .frame(width: min(668, geometry.size.width - 2 * ChocoSpace.xl))
+                        .frame(width: min(ChocoSpace.u(668), geometry.size.width - 2 * ChocoSpace.xl))
                         .fixedSize(horizontal: false, vertical: true)
                         .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
                         .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.98)))
@@ -312,6 +312,7 @@ struct BrowserWindow: View {
 
     private func configureWindow(_ window: NSWindow) {
         window.titlebarAppearsTransparent = true
+        TrafficLightInset.install(on: window, inset: 6, scale: ChocoSpace.scale)
         window.backgroundColor = NSColor(red: 94 / 255, green: 92 / 255, blue: 92 / 255, alpha: 1)
         let hidden = !model.state.sidebarVisible && !sidebarPeek && !model.showsArchive
         for button in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
@@ -341,7 +342,7 @@ struct BrowserWindow: View {
             Button { model.activeSession?.find(model.findText, backwards: true) } label: { Image(systemName: "chevron.up") }
             Button { model.activeSession?.find(model.findText) } label: { Image(systemName: "chevron.down") }
             Button { model.showsFind = false } label: { Image(systemName: "xmark") }
-        }.buttonStyle(.borderless).padding(10).background(.background)
+        }.buttonStyle(.borderless).padding(ChocoSpace.u(10)).background(.background)
     }
 
     /// Resolve only currently selected Core records. Retiring presentations keep
@@ -509,8 +510,8 @@ private struct BrowserPane: View {
     var body: some View {
         ZStack {
             if session.url == nil || session.url?.absoluteString == "about:blank" {
-                VStack(spacing: 14) {
-                    Image(systemName: "sparkle").font(.system(size: 40, weight: .light)).foregroundStyle(ChocoTheme.secondary)
+                VStack(spacing: ChocoSpace.u(14)) {
+                    Image(systemName: "sparkle").font(.system(size: ChocoSpace.u(40), weight: .light)).foregroundStyle(ChocoTheme.secondary)
                     Text("新しいタブ").font(.title2.weight(.medium))
                     Button("検索またはURLを入力  ⌘L") { model.showCommand(.navigate) }.buttonStyle(.bordered)
                 }.frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -523,7 +524,7 @@ private struct BrowserPane: View {
                     Text("ページを開けませんでした").font(.headline)
                     Text(message).font(.callout).foregroundStyle(.secondary).textSelection(.enabled)
                     Button("再試行") { session.reload() }.buttonStyle(.borderedProminent)
-                }.padding(30).frame(maxWidth: 480)
+                }.padding(ChocoSpace.u(30)).frame(maxWidth: ChocoSpace.u(480))
                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
             }
         }

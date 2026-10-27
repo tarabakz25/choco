@@ -106,8 +106,8 @@ struct TabDragSource: NSViewRepresentable {
 /// Draws the dragged tab and animates it: it lifts off the row as a shadowed pill, then shrinks to a
 /// favorite-sized tile while the pointer is over the Favorites grid (and grows back when it leaves).
 @MainActor final class DragImageMorph {
-    static let padding: CGFloat = 12
-    private static let tileSize = NSSize(width: 56, height: 38)
+    static let padding: CGFloat = ChocoSpace.u(12)
+    private static let tileSize = NSSize(width: ChocoSpace.u(56), height: ChocoSpace.u(38))
     private static let liftDuration = 0.12
     private static let morphDuration = 0.18
 
@@ -213,8 +213,8 @@ struct TabDragSource: NSViewRepresentable {
             NSGraphicsContext.restoreGraphicsState()
 
             // The icon glides from the row's leading edge to the tile's centre; the title fades out on the way.
-            let iconSize: CGFloat = 16
-            let leading = body.minX + 10
+            let iconSize: CGFloat = ChocoSpace.u(16)
+            let leading = body.minX + ChocoSpace.u(10)
             let centred = body.midX - iconSize / 2
             let iconX = leading + (centred - leading) * progress
             icon?.draw(in: NSRect(x: iconX, y: body.midY - iconSize / 2, width: iconSize, height: iconSize))
@@ -223,7 +223,7 @@ struct TabDragSource: NSViewRepresentable {
                 let style = NSMutableParagraphStyle()
                 style.lineBreakMode = .byTruncatingTail
                 let attributes: [NSAttributedString.Key: Any] = [
-                    .font: NSFont.systemFont(ofSize: 13, weight: .medium),
+                    .font: NSFont.systemFont(ofSize: ChocoSpace.u(13), weight: .medium),
                     .foregroundColor: NSColor(srgbRed: 0xED / 255, green: 0xED / 255, blue: 0xED / 255, alpha: textAlpha),
                     .paragraphStyle: style
                 ]
