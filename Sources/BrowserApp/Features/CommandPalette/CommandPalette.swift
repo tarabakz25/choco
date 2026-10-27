@@ -1,5 +1,6 @@
 import AppKit
 import BrowserCore
+import BrowserRuntime
 import SwiftUI
 
 enum CommandMode { case newTab, navigate }
@@ -9,20 +10,34 @@ struct CommandPalette: View {
     @FocusState private var focused: Bool
     @State private var selection = 0
     @State private var showsInputHelp = false
+    @State private var suggestions = SearchSuggestions.empty
+    @State private var suggestionsQuery = ""
 
-    private enum Result: Identifiable {
-        case tab(BrowserTab, String), command(String, String, Command)
+    private enum Row: Identifiable {
+        case tab(BrowserTab, String), archived(ArchiveEntry, String), navigate
+        case suggestion(String), link(SearchSuggestions.Link), command(String, String, Command)
         var id: String {
-            switch self { case .tab(let tab, _): return tab.id.uuidString; case .command(let title, _, _): return title }
+            switch self {
+            case .tab(let tab, _): return tab.id.uuidString
+            case .archived(let entry, _): return "archived-\(entry.id)"
+            case .navigate: return "navigate"
+            case .suggestion(let text): return "suggestion-\(text)"
+            case .link(let link): return "link-\(link.url.absoluteString)"
+            case .command(let title, _, _): return title
+            }
         }
     }
     private enum Command { case newTab, archive, restore, sidebar, clear, folder, space }
-    /// The Figma palette always shows five rows (`visibleRows`). Matches come first; when fewer than
-    /// five match, the remaining slots are filled with other tabs, then other commands, so the list
-    /// never collapses. `matchCount` tells filler apart from real matches.
+    /// The Figma palette always shows five rows (`visibleRows`). With text the order is: tabs opened before
+    /// (open tabs, then archived), the typed text and Google's related searches, then Google's top links, then
+    /// matching commands. When fewer than five rows exist, the remaining slots are filled with other tabs, then other
+    /// commands, so the list never collapses. `tabMatchCount` tells filler apart from real tab matches.
     private static let visibleRows = 5
-    private var resultSet: (results: [Result], matchCount: Int) {
-        let query = model.commandText.trimmingCharacters(in: .whitespacesAndNewlines)
+    /// Keeps the typed text and Google's rows within reach of the five visible slots.
+    private static let tabLimit = 3
+    private var query: String { model.commandText.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var rowSet: (rows: [Row], tabMatchCount: Int) {
+        let query = query
         func matches(_ text: String) -> Bool { query.isEmpty || text.localizedCaseInsensitiveContains(query) }
         let ordered = model.state.tabs.sorted { lhs, rhs in
             let leftHere = lhs.spaceID == model.state.selectedSpaceID
@@ -36,32 +51,46 @@ struct CommandPalette: View {
             ("Todayをすべて閉じる", "xmark", .clear), ("フォルダを作成", "folder.badge.plus", .folder),
             ("Spaceを作成", "plus.square", .space)
         ]
-        let matchedTabs = ordered.filter { matches("\($0.displayTitle) \($0.url)") }.prefix(7)
+        let tabLimit = query.isEmpty ? 7 : Self.tabLimit
+        let matchedTabs = ordered.filter { matches("\($0.displayTitle) \($0.url)") }.prefix(tabLimit)
+        // Archived tabs are pages opened before; they only appear once the person types, and never twice.
+        var seenURLs = Set(model.state.tabs.map(\.url))
+        let matchedArchive = query.isEmpty ? [] : model.state.archive.filter { entry in
+            matches("\(entry.tab.displayTitle) \(entry.tab.url)") && seenURLs.insert(entry.tab.url).inserted
+        }.prefix(max(0, tabLimit - matchedTabs.count))
         let matchedCommands = commands.filter { matches($0.0) }.prefix(5)
-        var results = matchedTabs.map { Result.tab($0, spaceName($0)) }
-            + matchedCommands.map { Result.command($0.0, $0.1, $0.2) }
-        let matchCount = results.count
-        var missing = Self.visibleRows - (showsNavigationResult ? 1 : 0) - results.count
+        var rows = matchedTabs.map { Row.tab($0, spaceName($0)) }
+            + matchedArchive.map { Row.archived($0, spaceName($0.tab)) }
+        let tabMatchCount = rows.count
+        if showsNavigationResult { rows.append(.navigate) }
+        let suggestions = currentSuggestions
+        rows += suggestions.queries.map { Row.suggestion($0) } + suggestions.links.map { Row.link($0) }
+        rows += matchedCommands.map { Row.command($0.0, $0.1, $0.2) }
+        var missing = Self.visibleRows - rows.count
         if missing > 0 {
             let used = Set(matchedTabs.map(\.id))
             let spareTabs = ordered.filter { !used.contains($0.id) }.prefix(missing)
-            results += spareTabs.map { Result.tab($0, spaceName($0)) }
+            rows += spareTabs.map { Row.tab($0, spaceName($0)) }
             missing -= spareTabs.count
         }
         if missing > 0 {
             let used = Set(matchedCommands.map(\.0))
-            results += commands.filter { !used.contains($0.0) }.prefix(missing).map { Result.command($0.0, $0.1, $0.2) }
+            rows += commands.filter { !used.contains($0.0) }.prefix(missing).map { Row.command($0.0, $0.1, $0.2) }
         }
-        return (results, matchCount)
+        return (rows, tabMatchCount)
     }
-    private var results: [Result] { resultSet.results }
+    private var rows: [Row] { rowSet.rows }
+    private var navigateIndex: Int { rows.firstIndex { if case .navigate = $0 { true } else { false } } ?? 0 }
 
-    private var showsNavigationResult: Bool {
-        model.commandMode == .navigate || !model.commandText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    private var showsNavigationResult: Bool { model.commandMode == .navigate || !query.isEmpty }
+    /// Cmd+L keeps navigating the typed text; otherwise the first real tab match wins. Filler rows are never
+    /// preselected: with no real match, Return still searches or opens the typed text.
+    private var preferredSelection: Int {
+        guard showsNavigationResult else { return 0 }
+        return model.commandMode == .navigate || rowSet.tabMatchCount == 0 ? navigateIndex : 0
     }
-    private var firstSelection: Int { showsNavigationResult || results.isEmpty ? 0 : 1 }
-    /// Filler rows are never preselected: with no real match, Return still searches or opens the typed text.
-    private var preferredSelection: Int { model.commandMode == .navigate || resultSet.matchCount == 0 ? 0 : 1 }
+
+    private var currentSuggestions: SearchSuggestions { suggestionsQuery == query ? suggestions : .empty }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -77,22 +106,9 @@ struct CommandPalette: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(spacing: 1) {
-                        if showsNavigationResult {
-                            Button { model.open(model.commandText, newTab: model.commandMode == .newTab) } label: {
-                                resultRow(
-                                    title: model.commandText.isEmpty ? "検索またはURLを入力" : model.commandText,
-                                    action: model.commandMode == .newTab ? "新しいタブで開く" : "現在のタブで開く",
-                                    selected: selection == 0
-                                ) { DesignIcon("9d9ff", size: 16) }
-                            }
-                            .buttonStyle(.plain)
-                            .disabled(model.commandText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                            .accessibilityIdentifier("command-navigate")
-                            .id(0)
-                        }
-                        ForEach(Array(results.enumerated()), id: \.element.id) { index, result in
-                            resultButton(result, index: index)
-                                .id(index + 1)
+                        ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
+                            rowButton(row, index: index)
+                                .id(index)
                         }
                     }
                 }
@@ -120,7 +136,8 @@ struct CommandPalette: View {
             // suggestion in another Space always requires an explicit choice.
             selection = preferredSelection
         }
-        .onChange(of: results.count) { _, count in selection = min(max(firstSelection, selection), count) }
+        .onChange(of: rows.count) { _, count in selection = min(selection, max(0, count - 1)) }
+        .task(id: query) { await loadSuggestions(for: query) }
         .onChange(of: model.commandMode == .navigate) { _, _ in selection = preferredSelection }
     }
 
@@ -137,11 +154,11 @@ struct CommandPalette: View {
                 .onSubmit { submitInput() }
                 .onKeyPress(.downArrow) {
                     guard !hasMarkedText else { return .ignored }
-                    selection = min(results.count, selection + 1); return .handled
+                    selection = min(max(0, rows.count - 1), selection + 1); return .handled
                 }
                 .onKeyPress(.upArrow) {
                     guard !hasMarkedText else { return .ignored }
-                    selection = max(firstSelection, selection - 1); return .handled
+                    selection = max(0, selection - 1); return .handled
                 }
                 .onKeyPress(.escape) {
                     guard !hasMarkedText else { return .ignored }
@@ -165,23 +182,46 @@ struct CommandPalette: View {
         .padding(.leading, ChocoSpace.u(18)).padding(.trailing, ChocoSpace.u(14)).frame(height: ChocoSpace.u(52))
     }
 
-    @ViewBuilder private func resultButton(_ result: Result, index: Int) -> some View {
-        Button { activate(result) } label: {
-            switch result {
+    @ViewBuilder private func rowButton(_ row: Row, index: Int) -> some View {
+        Button { activate(row) } label: {
+            switch row {
             case .tab(let tab, let space):
                 resultRow(title: tab.displayTitle,
-                          action: tab.spaceID == model.state.selectedSpaceID ? "タブに切り替え" : "切り替え · \(space)",
-                          selected: selection == index + 1) {
+                          action: tab.spaceID == model.state.selectedSpaceID ? "タブに切り替え" : nil,
+                          selected: selection == index) {
                     SiteIcon(url: tab.url, size: 16)
                 }
                 .help("開いているタブ · \(space)\n\(tab.url)")
+            case .archived(let entry, let space):
+                resultRow(title: entry.tab.displayTitle, action: nil, selected: selection == index) {
+                    SiteIcon(url: entry.tab.url, size: 16)
+                }
+                .help("アーカイブ · \(space)\n\(entry.tab.url)")
+            case .navigate:
+                resultRow(
+                    title: model.commandText.isEmpty ? "検索またはURLを入力" : model.commandText,
+                    action: nil,
+                    selected: selection == index
+                ) { DesignIcon("9d9ff", size: 16) }
+                .accessibilityIdentifier("command-navigate")
+            case .suggestion(let text):
+                resultRow(title: text, action: nil, selected: selection == index) {
+                    Image(systemName: "magnifyingglass").font(.system(size: ChocoSpace.u(13), weight: .medium))
+                        .frame(width: ChocoSpace.u(16), height: ChocoSpace.u(16))
+                }
+            case .link(let link):
+                resultRow(title: link.title, action: nil, selected: selection == index) {
+                    SiteIcon(url: link.url.absoluteString, size: 16)
+                }
+                .help(link.url.absoluteString)
             case .command(let title, let icon, _):
-                resultRow(title: title, action: "実行", selected: selection == index + 1) {
+                resultRow(title: title, action: "実行", selected: selection == index) {
                     commandIcon(icon)
                 }
             }
         }
         .buttonStyle(.plain)
+        .disabled({ if case .navigate = row { return query.isEmpty } else { return false } }())
     }
 
     @ViewBuilder private func commandIcon(_ symbol: String) -> some View {
@@ -193,19 +233,22 @@ struct CommandPalette: View {
         }
     }
 
-    private func resultRow<Icon: View>(title: String, action: String, selected: Bool, @ViewBuilder icon: () -> Icon) -> some View {
+    /// `action` is the right-hand label and Return badge; only current-Space tabs and commands show it.
+    private func resultRow<Icon: View>(title: String, action: String?, selected: Bool, @ViewBuilder icon: () -> Icon) -> some View {
         HStack(spacing: ChocoSpace.u(10)) {
             icon().frame(width: ChocoSpace.u(16), height: ChocoSpace.u(16))
             Text(title).font(ChocoTheme.font(13, weight: .semibold)).lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
-            HStack(spacing: ChocoSpace.sm) {
-                Text(action).font(ChocoTheme.font(12, weight: .semibold))
-                    .foregroundStyle(selected ? Color(hex: "F2F2F2") : Color(hex: "6E6E6E"))
-                    .lineLimit(1).frame(maxWidth: ChocoSpace.u(180), alignment: .trailing)
-                DesignIcon(selected ? "85a6a" : "caa3a", size: 14)
-                    .opacity(selected ? 1 : 0.6)
-                    .frame(width: ChocoSpace.u(22), height: ChocoSpace.u(22))
-                    .background(selected ? .white : Color(hex: "2E2E2F"), in: RoundedRectangle(cornerRadius: 4))
+            if let action {
+                HStack(spacing: ChocoSpace.sm) {
+                    Text(action).font(ChocoTheme.font(12, weight: .semibold))
+                        .foregroundStyle(selected ? Color(hex: "F2F2F2") : Color(hex: "6E6E6E"))
+                        .lineLimit(1).frame(maxWidth: ChocoSpace.u(180), alignment: .trailing)
+                    DesignIcon(selected ? "85a6a" : "caa3a", size: 14)
+                        .opacity(selected ? 1 : 0.6)
+                        .frame(width: ChocoSpace.u(22), height: ChocoSpace.u(22))
+                        .background(selected ? .white : Color(hex: "2E2E2F"), in: RoundedRectangle(cornerRadius: 4))
+                }
             }
         }
         .padding(.leading, ChocoSpace.u(10)).padding(.trailing, ChocoSpace.u(6)).frame(height: ChocoSpace.u(42))
@@ -243,15 +286,33 @@ struct CommandPalette: View {
         }
     }
 
+    /// Debounced so each keystroke does not hit the network; only plain search text is ever sent (`isSearchText`).
+    @MainActor private func loadSuggestions(for query: String) async {
+        guard SearchSuggestionService.isSearchText(query) else { suggestions = .empty; suggestionsQuery = ""; return }
+        do { try await Task.sleep(for: .milliseconds(150)) } catch { return }
+        let result = await model.suggestionService.suggestions(for: query)
+        guard !Task.isCancelled else { return }
+        suggestions = result
+        suggestionsQuery = query
+    }
+
     private func submitInput() {
         guard !hasMarkedText else { return }
-        if selection > 0, results.indices.contains(selection - 1) { activate(results[selection - 1]) }
+        if rows.indices.contains(selection) { activate(rows[selection]) }
         else { model.open(model.commandText, newTab: model.commandMode == .newTab) }
     }
 
-    private func activate(_ result: Result) {
-        switch result {
+    private func activate(_ row: Row) {
+        let newTab = model.commandMode == .newTab
+        switch row {
         case .tab(let tab, _): model.select(tab)
+        case .archived(let entry, _):
+            model.commandMode = nil
+            model.send(.restoreArchive(entry.id))
+        case .navigate: model.open(model.commandText, newTab: newTab)
+        case .suggestion(let text):
+            if let url = AddressResolver.searchURL(for: text) { model.open(url, newTab: newTab) }
+        case .link(let link): model.open(link.url, newTab: newTab)
         case .command(_, _, let command):
             model.commandMode = nil
             switch command {

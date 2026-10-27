@@ -28,6 +28,11 @@ public enum AddressResolver {
             }
         }
 
+        return searchURL(for: text)
+    }
+
+    /// The Google results page for `text`, regardless of whether it looks like an address.
+    public static func searchURL(for text: String) -> URL? {
         var search = URLComponents(string: "https://www.google.com/search")!
         search.queryItems = [URLQueryItem(name: "q", value: text)]
         return search.url
