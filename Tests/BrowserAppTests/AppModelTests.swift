@@ -74,3 +74,51 @@ import WebKit
         await model.store.flush()
     }
 }
+
+@Suite struct SpaceSwipeRecognizerTests {
+    private let travel: CGFloat = 184
+
+    @Test func sidewaysMovementLocksAndTracksTheFingers() {
+        var recognizer = SpaceSwipeRecognizer()
+        recognizer.add(dx: -2, dy: 0.5)
+        #expect(!recognizer.isHorizontal)
+        recognizer.add(dx: -10, dy: 1)
+        #expect(recognizer.isHorizontal)
+        recognizer.add(dx: -30, dy: 2)
+        #expect(recognizer.offset == -42)
+    }
+
+    @Test func verticalMovementNeverLocksAndStaysVertical() {
+        var recognizer = SpaceSwipeRecognizer()
+        recognizer.add(dx: 1, dy: 10)
+        recognizer.add(dx: -60, dy: 2)
+        #expect(!recognizer.isHorizontal)
+        recognizer.reset()
+        #expect(recognizer.offset == 0)
+    }
+
+    @Test func releaseCommitsPastAThirdOrOnAFlick() {
+        #expect(SpaceSwipeRecognizer.commits(offset: -80, velocity: 0, travel: travel))
+        #expect(!SpaceSwipeRecognizer.commits(offset: -40, velocity: 0, travel: travel))
+        #expect(SpaceSwipeRecognizer.commits(offset: -20, velocity: -12, travel: travel))
+        #expect(!SpaceSwipeRecognizer.commits(offset: -20, velocity: 12, travel: travel), "a flick back the other way cancels")
+        #expect(!SpaceSwipeRecognizer.commits(offset: -5, velocity: -12, travel: travel), "too small to be a switch")
+    }
+
+    @Test func pausingBeforeReleaseBleedsOffTheFlickSpeed() {
+        var recognizer = SpaceSwipeRecognizer()
+        recognizer.add(dx: -20, dy: 0)
+        recognizer.add(dx: -20, dy: 0)
+        let moving = abs(recognizer.velocity)
+        for _ in 0..<4 { recognizer.add(dx: 0, dy: 0) }
+        #expect(abs(recognizer.velocity) < moving / 8)
+    }
+
+    @Test func rubberBandResistsAndIsBounded() {
+        let small = SpaceSwipeRecognizer.rubberBand(-40, travel: travel)
+        let large = SpaceSwipeRecognizer.rubberBand(-4000, travel: travel)
+        #expect(small < 0 && small > -40)
+        #expect(large >= -travel * 0.25 - 0.001)
+        #expect(SpaceSwipeRecognizer.rubberBand(40, travel: travel) == -small)
+    }
+}

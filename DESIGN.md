@@ -432,7 +432,7 @@
 | Window Controls | 52 × 12(円 12 × 12、gap 8) |
 | Toolbar Icon Button | 28 × 28 |
 | Sidebar Bottom Button | 26 × 26 |
-| Space Dot | 26 × 26(点 7 × 7) |
+| Space Dot | 26 × 26(アイコン 14、active indicator 10 × 2) |
 | Mini Media Player | 184 × 28 |
 
 ---
@@ -456,7 +456,7 @@
 | Sidebar Bottom Button | 26×26 | – | 6 | icon 16 @0.7。Open False/True、Hover/Pressed あり |
 | Mini Media Player | 184×28 | padding 0/10/0/10 | 8 | fill `media/bg`。favicon 16、prev/next 13 @0.4、play 14 @0.85、volume 15 @0.85 |
 | Space Name Label | 184×28 | padding 0/10/0/10 | – | `Library/Section` + `space/label` |
-| Space Dot / Space Dots | 26×26 / 56〜116×26 | gap 4(Dots) | 8 | Active: 点 7×7 `space/dot-active`(60%)。Inactive: アイコン(planet 14 @0.4) |
+| Space Dot / Space Dots | 26×26 / 56〜116×26 | gap 4(Dots) | 8 | 全 Space がアイコン 14(Active @1.0、Inactive @0.4)。Active の下に indicator 10×2 r1 `space/dot-active`(60%) を y=22 に置き、切替で次のドットへスプリングでスライド(163:7447) |
 | Favorites Empty State | 184×81 | V gap 2、padding 12/12/8/12 | 10 | fill `favempty/bg`(12%、Hover は `favempty/bg-hover` 20%)、枠 1px `favempty/border`(30%)。星バッジ 16(星 9)、Title `Favorites/Empty Title`、Sub `Favorites/Empty Sub`、dismiss 20×20(×8)。Dismissed: 高さ 1、opacity 0 |
 | Sidebar Folder Name Field | 184×32 | H gap 8、padding 0/10/0/10 | 内側 6 | 内側 Field 140×24、枠 1.5 `settings/accent`、fill `sidebar/field`(7%)、選択ハイライト `settings/accent` r3 |
 | Arc Sidebar(全体) | 200×1127 | V gap 6、padding 2/8/12/8 | – | 上部 Top Bar 184×28(padding 0/0/0/6): Window Controls → Toggle → Back/Forward → Reload |

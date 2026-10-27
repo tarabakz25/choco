@@ -16,33 +16,24 @@ struct BrowserSidebar: View {
     @State private var favoritesDropTargeted = false
     @State private var pinnedDropTargeted = false
     @State private var tabPresentation: SidebarTabPresentation
+    @State private var slide: SpaceSlide
+    @State private var slideTask: Task<Void, Never>?
     @Environment(\.spaceTheme) private var theme
     @ChocoReducedMotion private var reduceMotion: Bool
 
     init(model: AppModel) {
         self.model = model
         _tabPresentation = State(initialValue: SidebarTabPresentation(tabs: model.state.tabs))
+        _slide = State(initialValue: SpaceSlide(current: model.state.selectedSpaceID))
     }
 
     var body: some View {
         VStack(spacing: ChocoSpace.u(6)) {
             topBar
             addressField
-            ScrollView(.vertical, showsIndicators: false) {
-                VStack(alignment: .leading, spacing: ChocoSpace.u(6)) {
-                    // Figma's Space lists (162:7390) lead with the Space name; the empty Space labels itself below.
-                    if !isSpaceEmpty { spaceNameLabel }
-                    if model.state.favorites.isEmpty && !hidesFavoritesHint { favoritesEmpty } else { favorites }
-                    if isSpaceEmpty { spaceNameLabel }
-                    pinnedTabs
-                    if !isSpaceEmpty { clearDivider }
-                    newTabButton
-                    VStack(spacing: 0) {
-                        ForEach(presentedSpaceTabs.filter { !$0.tab.isPinned }) { item in presentedTabRow(item, bottomGap: ChocoSpace.u(4)) }
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .topLeading)
-            }
+            // Vertical input is only taken when the list overflows; otherwise it must not even rubber-band.
+            ScrollView(.vertical, showsIndicators: false) { spaceLists }
+            .scrollBounceBehavior(.basedOnSize, axes: .vertical)
             .frame(maxHeight: .infinity)
             Color.clear.frame(height: ChocoSpace.u(6))
             bottomBar
@@ -54,6 +45,7 @@ struct BrowserSidebar: View {
         .frame(minWidth: ChocoTheme.sidebarWidth, maxWidth: .infinity)
         .frame(maxHeight: .infinity)
         .background(theme.sidebar)
+        .background(SpaceSwipeArea(onChange: { swipeChanged($0) }, onEnd: { swipeEnded($0, velocity: $1) }))
         .foregroundStyle(ChocoTheme.text)
         .font(ChocoTheme.font(13))
         .accessibilityElement(children: .contain)
@@ -61,12 +53,141 @@ struct BrowserSidebar: View {
         .onAppear { tabPresentation.update(tabs: model.state.tabs, reducedMotion: reduceMotion) }
         .onChange(of: model.state.tabs) { _, tabs in tabPresentation.update(tabs: tabs, reducedMotion: reduceMotion) }
         .onChange(of: reduceMotion) { _, reduced in tabPresentation.update(tabs: model.state.tabs, reducedMotion: reduced) }
-        .onDisappear { tabPresentation.cancelPending() }
+        .onChange(of: model.state.selectedSpaceID) { old, new in beginSpaceSlide(from: old, to: new) }
+        .onDisappear { tabPresentation.cancelPending(); slideTask?.cancel(); slide = SpaceSlide(current: model.state.selectedSpaceID) }
     }
 
-    private var spaceTabs: [BrowserTab] { model.state.tabs.filter { $0.spaceID == model.state.selectedSpaceID } }
-    private var rootFolders: [BrowserFolder] { model.state.folders.filter { $0.spaceID == model.state.selectedSpaceID && $0.parentID == nil } }
-    private var presentedSpaceTabs: [SidebarPresentedTab] { tabPresentation.rows.filter { $0.tab.spaceID == model.state.selectedSpaceID } }
+    private func spaceTabs(in spaceID: UUID) -> [BrowserTab] { model.state.tabs.filter { $0.spaceID == spaceID } }
+    private func rootFolders(in spaceID: UUID) -> [BrowserFolder] { model.state.folders.filter { $0.spaceID == spaceID && $0.parentID == nil } }
+    private func presentedSpaceTabs(in spaceID: UUID) -> [SidebarPresentedTab] { tabPresentation.rows.filter { $0.tab.spaceID == spaceID } }
+
+    /// How far a list moves to clear the 184pt column.
+    private static var listTravel: CGFloat { ChocoTheme.sidebarWidth - 2 * ChocoSpace.u(8) }
+
+    /// Figma `Space Lists` (163:7449): switching Space slides the old list out and the new one in on the 320 ms spring,
+    /// the old one fading over 160 ms and the new one over 180 ms, 40 ms in. The list is laid out per Space id, so the
+    /// outgoing list keeps showing its own Space instead of following the selection.
+    private var spaceLists: some View {
+        let travel = Self.listTravel
+        return ZStack(alignment: .topLeading) {
+            if let outgoing = slide.outgoing {
+                spaceList(outgoing)
+                    .offset(x: -slide.direction * travel * slide.progress)
+                    .opacity(slide.outgoingOpacity)
+                    .allowsHitTesting(false).accessibilityHidden(true)
+            }
+            spaceList(slide.current)
+                .offset(x: slide.direction * travel * (1 - slide.progress) + slide.rubber)
+                .opacity(slide.incomingOpacity)
+        }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+    }
+
+    private func spaceList(_ spaceID: UUID) -> some View {
+        let isEmpty = isSpaceEmpty(spaceID)
+        return VStack(alignment: .leading, spacing: ChocoSpace.u(6)) {
+            // Figma's Space lists (162:7390) lead with the Space name; the empty Space labels itself below.
+            if !isEmpty { spaceNameLabel(spaceID) }
+            if model.state.favorites.isEmpty && !hidesFavoritesHint { favoritesEmpty } else { favorites }
+            if isEmpty { spaceNameLabel(spaceID) }
+            pinnedTabs(in: spaceID)
+            if !isEmpty { clearDivider(in: spaceID) }
+            newTabButton
+            VStack(spacing: 0) {
+                ForEach(presentedSpaceTabs(in: spaceID).filter { !$0.tab.isPinned }) { item in presentedTabRow(item, bottomGap: ChocoSpace.u(4)) }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+    }
+
+    /// A sideways two-finger swipe over the sidebar drags the lists with the fingers: the neighbouring Space slides in
+    /// behind the current one, and pulling past the first or last Space meets resistance.
+    private func swipeChanged(_ offset: CGFloat) {
+        // A switch that is already settling finishes first.
+        guard slide.dragging || slide.outgoing == nil else { return }
+        slideTask?.cancel()
+        let ids = model.state.spaces.map(\.id)
+        let selected = model.state.selectedSpaceID
+        let step = offset < 0 ? 1 : -1
+        var immediate = Transaction(); immediate.disablesAnimations = true
+        withTransaction(immediate) {
+            guard let index = ids.firstIndex(of: selected), ids.indices.contains(index + step) else {
+                slide = SpaceSlide(current: selected, rubber: SpaceSwipeRecognizer.rubberBand(offset, travel: Self.listTravel), dragging: true)
+                model.clearSpaceBlend()
+                return
+            }
+            let progress = min(1, abs(offset) / Self.listTravel)
+            slide = SpaceSlide(current: ids[index + step], outgoing: selected, direction: CGFloat(step), progress: progress,
+                               outgoingOpacity: 1 - min(1, progress / 0.5), incomingOpacity: min(1, max(0, (progress - 0.12) / 0.5)),
+                               dragging: true)
+            // The window colour travels with the fingers too.
+            model.dragSpaceBlend(from: selected, to: ids[index + step], progress: progress)
+        }
+    }
+
+    /// The fingers lifted: finish the switch from where the lists are, or settle back.
+    private func swipeEnded(_ offset: CGFloat, velocity: CGFloat) {
+        guard slide.dragging else { return }
+        slideTask?.cancel()
+        let selected = model.state.selectedSpaceID
+        if let outgoing = slide.outgoing, outgoing == selected,
+           SpaceSwipeRecognizer.commits(offset: offset, velocity: velocity, travel: Self.listTravel) {
+            let target = slide.current
+            slide.dragging = false
+            if reduceMotion {
+                slide = SpaceSlide(current: target)
+            } else {
+                withAnimation(ChocoMotion.space) { slide.progress = 1 }
+                withAnimation(ChocoMotion.spaceListFadeOut) { slide.outgoingOpacity = 0 }
+                withAnimation(ChocoMotion.spaceListFadeIn) { slide.incomingOpacity = 1 }
+                slideTask = Task { @MainActor in
+                    do { try await Task.sleep(for: .milliseconds(360)) } catch { return }
+                    slide.outgoing = nil
+                }
+            }
+            // The selection catches up; `beginSpaceSlide` and the colour blend see the switch already under way.
+            model.settleSpaceBlend(to: 1)
+            model.send(.selectSpace(target))
+            return
+        }
+        let settled = SpaceSlide(current: selected)
+        model.settleSpaceBlend(to: 0)
+        guard !reduceMotion else { slide = settled; return }
+        let hasNeighbour = slide.outgoing != nil
+        slide.dragging = false
+        withAnimation(ChocoMotion.space) {
+            slide.rubber = 0
+            if hasNeighbour { slide.progress = 0 }
+        }
+        withAnimation(ChocoMotion.spaceListFadeOut) { slide.outgoingOpacity = 1; slide.incomingOpacity = 0 }
+        slideTask = Task { @MainActor in
+            do { try await Task.sleep(for: .milliseconds(360)) } catch { return }
+            var immediate = Transaction(); immediate.disablesAnimations = true
+            withTransaction(immediate) { slide = settled }
+        }
+    }
+
+    /// Follows a change of the selected Space: the lists restart from the edge on the next frame and animate in.
+    private func beginSpaceSlide(from old: UUID, to new: UUID) {
+        // A swipe already carried the lists across.
+        if slide.current == new, slide.outgoing == old { return }
+        slideTask?.cancel()
+        guard !reduceMotion, old != new else { slide = SpaceSlide(current: new); return }
+        let spaces = model.state.spaces.map(\.id)
+        let direction: CGFloat = (spaces.firstIndex(of: new) ?? 0) >= (spaces.firstIndex(of: old) ?? 0) ? 1 : -1
+        var immediate = Transaction(); immediate.disablesAnimations = true
+        withTransaction(immediate) {
+            slide = SpaceSlide(current: new, outgoing: old, direction: direction, progress: 0, outgoingOpacity: 1, incomingOpacity: 0)
+        }
+        slideTask = Task { @MainActor in
+            do { try await Task.sleep(for: .milliseconds(16)) } catch { return }
+            withAnimation(ChocoMotion.space) { slide.progress = 1 }
+            withAnimation(ChocoMotion.spaceListFadeOut) { slide.outgoingOpacity = 0 }
+            withAnimation(ChocoMotion.spaceListFadeIn) { slide.incomingOpacity = 1 }
+            do { try await Task.sleep(for: .milliseconds(360)) } catch { return }
+            slide.outgoing = nil
+        }
+    }
 
     /// Distance from the sidebar's leading edge to the first control, clear of the native traffic lights.
     private static let controlsInset: CGFloat = 76
@@ -157,7 +278,7 @@ struct BrowserSidebar: View {
     }
 
     /// No tabs, folders or pinned items in the current Space: Figma 157:7042 drops the divider and selection tint.
-    private var isSpaceEmpty: Bool { spaceTabs.isEmpty && rootFolders.isEmpty }
+    private func isSpaceEmpty(_ spaceID: UUID) -> Bool { spaceTabs(in: spaceID).isEmpty && rootFolders(in: spaceID).isEmpty }
 
     /// Figma `Favorites Empty` (156:1528): dashed 10pt-radius box, 16pt star badge, two centered lines.
     private var favoritesEmpty: some View {
@@ -191,8 +312,8 @@ struct BrowserSidebar: View {
     }
 
     /// Figma `Space Name` (156:1704): 28pt row labelling an otherwise empty Space.
-    private var spaceNameLabel: some View {
-        Text(model.selectedSpace?.name ?? "")
+    private func spaceNameLabel(_ spaceID: UUID) -> some View {
+        Text(model.state.spaces.first { $0.id == spaceID }?.name ?? "")
             .font(ChocoTheme.font(11, weight: .semibold)).foregroundStyle(theme.label).lineLimit(1)
             .padding(.horizontal, ChocoSpace.u(10)).frame(maxWidth: .infinity, alignment: .leading).frame(height: ChocoSpace.u(28))
             .accessibilityIdentifier("space-name")
@@ -238,7 +359,7 @@ struct BrowserSidebar: View {
         .padding(.bottom, ChocoSpace.u(6))
     }
 
-    private var pinnedTabs: some View {
+    private func pinnedTabs(in spaceID: UUID) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             if pinnedCollapsed {
                 Button { pinnedCollapsed = false } label: {
@@ -249,15 +370,15 @@ struct BrowserSidebar: View {
                     }.padding(.horizontal, ChocoSpace.u(10)).frame(height: ChocoSpace.u(32)).contentShape(Rectangle())
                 }.buttonStyle(ChocoPressStyle(radius: 8))
             } else {
-                ForEach(rootFolders) { folder in folderRow(folder, depth: 0) }
-                ForEach(presentedSpaceTabs.filter { $0.tab.isPinned && $0.tab.folderID == nil }) { item in presentedTabRow(item) }
+                ForEach(rootFolders(in: spaceID)) { folder in folderRow(folder, depth: 0) }
+                ForEach(presentedSpaceTabs(in: spaceID).filter { $0.tab.isPinned && $0.tab.folderID == nil }) { item in presentedTabRow(item) }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .overlay(alignment: .topLeading) {
             // With nothing pinned yet there is no row to drop on. The zone floats over the divider while a tab
             // is dragged, so the list underneath never shifts.
-            if draggedTabCanPin && pinnedIsEmpty {
+            if draggedTabCanPin && pinnedIsEmpty(in: spaceID) {
                 pinDropHint
                     .background(theme.sidebar, in: RoundedRectangle(cornerRadius: 8))
                     .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .top)))
@@ -283,7 +404,7 @@ struct BrowserSidebar: View {
         }
     }
 
-    private var pinnedIsEmpty: Bool { rootFolders.isEmpty && !spaceTabs.contains { $0.isPinned } }
+    private func pinnedIsEmpty(in spaceID: UUID) -> Bool { rootFolders(in: spaceID).isEmpty && !spaceTabs(in: spaceID).contains { $0.isPinned } }
 
     private var draggedTabCanPin: Bool {
         guard let id = model.draggingTabID, let tab = model.state.tabs.first(where: { $0.id == id }) else { return false }
@@ -307,7 +428,7 @@ struct BrowserSidebar: View {
         .accessibilityIdentifier("pin-drop-hint")
     }
 
-    private var clearDivider: some View {
+    private func clearDivider(in spaceID: UUID) -> some View {
         HStack(spacing: ChocoSpace.u(6)) {
             Rectangle().fill(ChocoTheme.divider).frame(height: 1)
             Button { model.send(.clearToday) } label: {
@@ -316,7 +437,7 @@ struct BrowserSidebar: View {
                     Text("クリア").font(ChocoTheme.font(11, weight: .medium))
                 }.foregroundStyle(ChocoTheme.secondary).opacity(clearHovered ? 1 : 0.75)
             }
-            .buttonStyle(.plain).onHover { clearHovered = $0 }.disabled(!spaceTabs.contains { !$0.isPinned })
+            .buttonStyle(.plain).onHover { clearHovered = $0 }.disabled(!spaceTabs(in: spaceID).contains { !$0.isPinned })
             .help("Todayのタブをアーカイブへ移動").accessibilityIdentifier("clear-today")
         }.padding(.horizontal, ChocoSpace.xs).frame(height: ChocoSpace.u(16))
     }
@@ -364,7 +485,7 @@ struct BrowserSidebar: View {
             if !collapsedFolders.contains(folder.id) {
                 VStack(spacing: 0) {
                     ForEach(children) { child in folderRow(child, depth: depth + 1) }
-                    ForEach(presentedSpaceTabs.filter { $0.tab.folderID == folder.id }) { item in presentedTabRow(item) }
+                    ForEach(presentedSpaceTabs(in: folder.spaceID).filter { $0.tab.folderID == folder.id }) { item in presentedTabRow(item) }
                 }.padding(.leading, ChocoSpace.md)
             }
         })
@@ -515,19 +636,20 @@ struct BrowserSidebar: View {
         .frame(height: ChocoSpace.u(26))
     }
 
-    /// Figma `Space Dots`: the current Space is a small dot, the others show their icon (14pt, 8pt radius, 5% on hover).
+    /// Figma `Space Dots` (163:8024): every Space shows its icon (14pt, 8pt radius, 5% on hover) — full strength for the
+    /// current one, 40% for the rest — and a 10×2pt `active indicator` under the current one slides to the new Space.
     private var spaceDots: some View {
-        HStack(spacing: ChocoSpace.u(4)) {
+        let selectedIndex = CGFloat(model.state.spaces.firstIndex { $0.id == model.state.selectedSpaceID } ?? 0)
+        // While the fingers drag the lists the indicator travels with them.
+        let activeIndex = slide.dragging && slide.outgoing != nil ? selectedIndex + slide.direction * slide.progress : selectedIndex
+        return HStack(spacing: ChocoSpace.u(4)) {
             ForEach(model.state.spaces) { space in
                 let isCurrent = model.state.selectedSpaceID == space.id
                 Button { model.send(.selectSpace(space.id)) } label: {
-                    Group {
-                        if isCurrent {
-                            Circle().fill(Color.white.opacity(0.6)).frame(width: ChocoSpace.u(7), height: ChocoSpace.u(7))
-                        } else {
-                            SpaceIcon(space.icon, size: 14)
-                        }
-                    }.frame(width: ChocoSpace.u(26), height: ChocoSpace.u(26))
+                    SpaceIcon(space.icon, size: 14)
+                        .opacity(isCurrent ? 1 : 0.4)
+                        .animation(reduceMotion ? nil : ChocoMotion.spaceDotFade, value: isCurrent)
+                        .frame(width: ChocoSpace.u(26), height: ChocoSpace.u(26))
                 }
                 .buttonStyle(ChocoPressStyle(radius: 8)).help(space.name).accessibilityLabel("Space: \(space.name)")
                 .accessibilityAddTraits(isCurrent ? .isSelected : [])
@@ -537,7 +659,29 @@ struct BrowserSidebar: View {
                 }
             }
         }
+        .overlay(alignment: .topLeading) {
+            RoundedRectangle(cornerRadius: 1).fill(Color.white.opacity(0.6))
+                .frame(width: ChocoSpace.u(10), height: ChocoSpace.u(2))
+                .offset(x: ChocoSpace.u(8) + activeIndex * (ChocoSpace.u(26) + ChocoSpace.u(4)), y: ChocoSpace.u(22))
+                .animation(reduceMotion || slide.dragging ? nil : ChocoMotion.spaceIndicator, value: activeIndex)
+                .allowsHitTesting(false).accessibilityHidden(true)
+        }
     }
+}
+
+/// Where the sidebar's Space lists are in a Space switch: `current` is the list shown, `outgoing` the one leaving.
+/// `direction` is 1 when the new Space comes after the old one (the lists move left), -1 otherwise.
+private struct SpaceSlide {
+    var current: UUID
+    var outgoing: UUID?
+    var direction: CGFloat = 1
+    var progress: CGFloat = 1
+    var outgoingOpacity: Double = 0
+    var incomingOpacity: Double = 1
+    /// Resistance offset when the fingers pull past the first or last Space.
+    var rubber: CGFloat = 0
+    /// The fingers are still down and the lists follow them.
+    var dragging = false
 }
 
 /// A sidebar tab row: tints on hover, press and selection like `ChocoPressStyle`, selects on click, and lifts

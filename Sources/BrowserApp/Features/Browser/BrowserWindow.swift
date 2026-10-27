@@ -25,11 +25,10 @@ struct BrowserWindow: View {
     @ChocoReducedMotion private var reduceMotion: Bool
 
     /// Colour mode of the selected Space (DESIGN.md §7); the window chrome, sidebar and empty page follow it.
-    private var theme: SpaceTheme { SpaceTheme(colorHex: model.selectedSpace?.colorHex) }
-    /// `Space 切替` (DESIGN.md §11): the window colour eases to the new Space's mode.
-    private var themeBackground: some View {
-        theme.sidebar.animation(reduceMotion ? nil : ChocoMotion.space, value: theme)
-    }
+    private var theme: SpaceTheme { model.currentSpaceTheme }
+    /// `Space 切替` (DESIGN.md §11): the window colour is the mix of the two Spaces' palettes while `AppModel` animates a
+    /// switch (320 ms spring) or a swipe drags it, so it is never given an animation of its own here.
+    private var themeBackground: some View { theme.sidebar }
     private var commandPresented: Bool { model.commandMode != nil }
     private var modalPresented: Bool { commandPresented || model.showsSiteControls || model.showsNewMenu }
     private var sidebarPresented: Bool { !model.showsArchive && (model.state.sidebarVisible || sidebarPeek) }
@@ -130,6 +129,7 @@ struct BrowserWindow: View {
             synchronizePages()
         }
         .onChange(of: reduceMotion) { _, _ in synchronizePages(forceImmediate: true) }
+        .onChange(of: reduceMotion, initial: true) { _, reduced in model.reducesMotion = reduced }
         .onChange(of: model.state.sidebarVisible) { _, _ in
             edgeHovered = false
             sidebarPeek = false
@@ -506,7 +506,7 @@ struct BrowserWindow: View {
 
     /// With no tab open the page area is just the dim gradient; there is no message or button.
     private var welcome: some View {
-        theme.emptyContent.frame(maxWidth: .infinity, maxHeight: .infinity).accessibilityHidden(true)
+        SpaceEmptyContent(theme: theme).frame(maxWidth: .infinity, maxHeight: .infinity).accessibilityHidden(true)
     }
 }
 
