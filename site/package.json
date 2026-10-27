@@ -26,5 +26,8 @@
   "devDependencies": {
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0"
+  },
+  "engines": {
+    "node": ">=22.23.4"
   }
 }

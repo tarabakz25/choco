@@ -48,4 +48,14 @@ import Testing
         #expect(ChocoSliderMetrics.fraction(of: 5, in: 5...5) == 0)
         #expect(ChocoSliderMetrics.fraction(of: 200, in: 0...100) == 1)
     }
+
+    @Test func sliderArrowKeysMoveByStepAndStayInRange() {
+        #expect(ChocoSliderMetrics.nudged(0.5, direction: 1, in: 0...1, step: nil) == 0.55)
+        #expect(ChocoSliderMetrics.nudged(0.5, direction: -1, in: 0...1, step: 0.25) == 0.25)
+        #expect(ChocoSliderMetrics.nudged(0.95, direction: 1, in: 0...1, step: nil) == 1)
+        #expect(ChocoSliderMetrics.nudged(0, direction: -1, in: 0...1, step: 0.25) == 0)
+        #expect(ChocoSliderMetrics.nudged(10, direction: 1, in: 0...100, step: 5) == 15)
+        // A value off the step grid lands back on it.
+        #expect(ChocoSliderMetrics.nudged(12, direction: 1, in: 0...100, step: 5) == 15)
+    }
 }
