@@ -68,7 +68,7 @@ struct ChocoSlider: View {
                 value = ChocoSliderMetrics.value(atX: drag.location.x, width: width, in: range, step: step)
             })
         }
-        .frame(height: 20)
+        .frame(height: ChocoSpace.u(20))
         .opacity(isEnabled ? 1 : ChocoTheme.disabledOpacity)
         .allowsHitTesting(isEnabled)
         // Keyboard: focus with Tab (Full Keyboard Access) and adjust with the arrow keys, like a native slider.

@@ -15,9 +15,9 @@ struct ChocoColorSwatch: View {
     var body: some View {
         Button(action: action) {
             ZStack {
-                Circle().fill(color).frame(width: 24, height: 24)
+                Circle().fill(color).frame(width: ChocoSpace.u(24), height: ChocoSpace.u(24))
                 if isSelected { Circle().strokeBorder(ChocoTheme.Settings.textPrimary, lineWidth: 2) }
-            }.frame(width: 32, height: 32).contentShape(Circle())
+            }.frame(width: ChocoSpace.u(32), height: ChocoSpace.u(32)).contentShape(Circle())
         }
         .buttonStyle(.plain).accessibilityLabel(label)
         .accessibilityAddTraits(isSelected ? .isSelected : [])

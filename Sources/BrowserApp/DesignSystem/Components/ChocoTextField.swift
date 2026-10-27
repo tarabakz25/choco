@@ -36,7 +36,7 @@ struct ChocoTextField: View {
                 .focused(binding).onSubmit { onSubmit?() }.accessibilityLabel(placeholder)
         }
         .font(ChocoTheme.font(13))
-        .padding(.horizontal, ChocoSpace.md).frame(height: tone == .settings ? 36 : 40)
+        .padding(.horizontal, ChocoSpace.md).frame(height: ChocoSpace.u(tone == .settings ? 36 : 40))
         .background(background, in: shape)
         .overlay { shape.strokeBorder(border(focused: focused), lineWidth: borderWidth(focused: focused)) }
         .contentShape(shape)

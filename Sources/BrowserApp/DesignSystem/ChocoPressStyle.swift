@@ -6,7 +6,9 @@ struct ChocoPressStyle: ButtonStyle {
     var radius: CGFloat = 6
     var isActive = false
     var tint: Color = ChocoTheme.selected
-    var hoverTint: Color = ChocoTheme.tile
+    var hoverTint: Color = ChocoTheme.hover
+    /// Figma's disabled toolbar buttons fade to 35%; most controls keep their full opacity.
+    var disabledOpacity: CGFloat = 1
 
     func makeBody(configuration: Configuration) -> some View {
         PressBody(configuration: configuration, style: self)
@@ -23,6 +25,7 @@ struct ChocoPressStyle: ButtonStyle {
             let lit = isEnabled && (configuration.isPressed || style.isActive)
             let hovered = isEnabled && hovering && !lit
             configuration.label
+                .opacity(isEnabled ? 1 : style.disabledOpacity)
                 .contentShape(RoundedRectangle(cornerRadius: style.radius))
                 // Behind the label: an opaque tint (the New menu's) would otherwise cover its text and icon.
                 .background {

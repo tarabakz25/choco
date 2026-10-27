@@ -1,0 +1,27 @@
+---
+import { DMG_URL } from '../config';
+import type { Dict } from '../i18n';
+
+interface Props { t: Dict['download']; size?: 'lg' | 'sm' }
+const { t, size = 'lg' } = Astro.props;
+const lg = size === 'lg';
+---
+<a
+  href={DMG_URL}
+  download="choco-browser.dmg"
+  data-download
+  data-state="idle"
+  class:list={[
+    'group relative inline-flex items-center gap-2.5 overflow-hidden rounded-full font-semibold text-white',
+    'bg-gradient-to-b from-[#bb68be] to-[#8f3f92] shadow-[0_8px_30px_-6px_rgb(165_83_167/0.7),inset_0_1px_0_rgb(255_255_255/0.25)]',
+    'transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_40px_-6px_rgb(165_83_167/0.85),inset_0_1px_0_rgb(255_255_255/0.3)] active:translate-y-0',
+    'focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-choco-light',
+    lg ? 'px-7 py-4 text-base' : 'px-4 py-1.5 text-sm',
+  ]}
+>
+  <span aria-hidden="true" class="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 group-hover:translate-x-full"></span>
+  <svg width={lg ? 20 : 16} height={lg ? 20 : 16} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="relative transition-transform group-hover:translate-y-0.5 group-data-[state=started]:hidden"><path d="M12 3v12m0 0l-4.5-4.5M12 15l4.5-4.5M4 20h16" /></svg>
+  <svg width={lg ? 20 : 16} height={lg ? 20 : 16} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="relative hidden group-data-[state=started]:block"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
+  <span class="relative group-data-[state=started]:hidden">{t.button}{lg && <span class="ml-1.5 font-mono text-sm font-medium opacity-70">{t.ext}</span>}</span>
+  <span class="relative hidden group-data-[state=started]:inline" aria-live="polite">{t.started}</span>
+</a>

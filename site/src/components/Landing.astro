@@ -1,0 +1,114 @@
+---
+import Base from '../layouts/Base.astro';
+import Header from './Header.astro';
+import Features from './Features.astro';
+import Install from './Install.astro';
+import DownloadButton from './DownloadButton.astro';
+import RemotionPlayer from './RemotionPlayer';
+import { dictionaries, type Locale } from '../i18n';
+import { REPO_URL, RELEASES_URL } from '../config';
+import { url } from '../utils';
+
+interface Props { locale: Locale }
+const { locale } = Astro.props;
+const t = dictionaries[locale];
+---
+<Base locale={locale}>
+  <Header locale={locale} />
+
+  <main>
+    <!-- ================= Hero ================= -->
+    <section class="relative isolate overflow-hidden pb-24 pt-36 md:pt-44">
+      <div aria-hidden="true" class="pointer-events-none absolute inset-0 -z-10">
+        <div class="absolute left-1/2 top-[-22rem] h-[48rem] w-[84rem] -translate-x-1/2 bg-[radial-gradient(closest-side,rgb(165_83_167/0.38),transparent)]"></div>
+        <div class="absolute right-[-14rem] top-[20rem] h-[34rem] w-[44rem] bg-[radial-gradient(closest-side,rgb(63_182_139/0.12),transparent)]"></div>
+        <div class="absolute inset-0 bg-[linear-gradient(rgb(255_255_255/0.035)_1px,transparent_1px),linear-gradient(90deg,rgb(255_255_255/0.035)_1px,transparent_1px)] bg-[size:56px_56px] [mask-image:radial-gradient(ellipse_70%_55%_at_50%_0%,#000_30%,transparent_75%)]"></div>
+      </div>
+
+      <div class="mx-auto w-[min(1120px,100%-2rem)] text-center">
+        <p class="reveal inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.04] px-4 py-1.5 text-sm text-fg-2 backdrop-blur">
+          <span class="size-1.5 rounded-full bg-[#3fb68b] shadow-[0_0_10px_#3fb68b]"></span>{t.hero.badge}
+        </p>
+        <h1 class="reveal mx-auto mt-7 max-w-4xl text-[2.75rem] font-extrabold leading-[1.08] tracking-[-0.035em] sm:text-6xl md:text-7xl" style="--reveal-delay:80ms">
+          <span class="inline-block">{t.hero.title[0]}</span><br />
+          <span class="inline-block bg-gradient-to-r from-[#f0c4f2] via-choco-light to-[#9fb4ff] bg-clip-text text-transparent">{t.hero.title[1]}</span>
+        </h1>
+        <p class="reveal mx-auto mt-7 max-w-2xl text-lg leading-relaxed text-fg-2 md:text-xl" style="--reveal-delay:160ms">{t.hero.lead}</p>
+
+        <div class="reveal mt-10 flex flex-wrap items-center justify-center gap-3" style="--reveal-delay:240ms">
+          <DownloadButton t={t.download} />
+          <a href="#install" class="rounded-full border border-white/15 px-6 py-4 font-semibold text-fg transition hover:border-white/30 hover:bg-white/[0.06]">{t.download.howTo}</a>
+        </div>
+        <p class="reveal mx-auto mt-5 max-w-xl text-sm leading-relaxed text-fg-3" style="--reveal-delay:300ms">
+          {t.download.latest}: <a href={RELEASES_URL} class="underline-offset-4 hover:text-fg hover:underline"><span data-latest-version></span>{t.download.notes}</a><br />{t.download.unsigned}
+        </p>
+        <p data-download-hint hidden class="mx-auto mt-3 max-w-xl rounded-xl border border-[#3fb68b]/30 bg-[#3fb68b]/10 px-4 py-2 text-sm text-[#9be8c9]">{t.download.startedHint}</p>
+        <p data-no-release hidden class="mx-auto mt-3 max-w-xl text-sm text-fg-3">{t.download.noRelease}</p>
+        <p class="mac-only-note mx-auto mt-3 max-w-xl text-sm text-fg-3">{t.download.notMac}</p>
+      </div>
+
+      <!-- Remotion のデモ映像 -->
+      <div class="reveal relative mx-auto mt-16 w-[min(1120px,100%-1rem)] md:mt-20" style="--reveal-delay:200ms">
+        <div aria-hidden="true" class="absolute inset-x-[-6%] top-[-8%] -z-10 h-[116%] bg-[radial-gradient(closest-side,rgb(165_83_167/0.38),transparent)]"></div>
+        <div class="aspect-[1280/800] w-full">
+          <RemotionPlayer client:visible scene="hero" locale={locale} label={t.hero.demoLabel} />
+        </div>
+      </div>
+    </section>
+
+    <Features locale={locale} />
+
+    <!-- ================= Shortcuts ================= -->
+    <section class="border-t border-white/[0.06] py-20 md:py-24">
+      <div class="mx-auto w-[min(1120px,100%-2rem)]">
+        <h2 class="reveal text-2xl font-bold tracking-tight md:text-4xl">{t.shortcuts.title}</h2>
+        <div class="mt-10 grid gap-3 md:grid-cols-2">
+          {t.shortcuts.rows.map((row, i) => (
+            <div class="reveal flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-4" style={`--reveal-delay:${(i % 2) * 80}ms`}>
+              <div class="flex shrink-0 flex-wrap gap-1.5">{row.keys.map((k) => <kbd>{k}</kbd>)}</div>
+              <span class="text-[15px] text-fg-2">{row.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <Install locale={locale} />
+
+    <!-- ================= Privacy ================= -->
+    <section id="privacy" class="border-t border-white/[0.06] py-24 md:py-32">
+      <div class="mx-auto w-[min(1120px,100%-2rem)]">
+        <div class="reveal max-w-2xl">
+          <h2 class="text-3xl font-bold tracking-tight md:text-5xl">{t.privacy.title}</h2>
+          <p class="mt-4 text-lg leading-relaxed text-fg-2">{t.privacy.sub}</p>
+        </div>
+        <div class="mt-12 grid gap-5 md:grid-cols-3">
+          {t.privacy.items.map((item, i) => (
+            <div class="reveal rounded-3xl border border-white/10 bg-white/[0.03] p-7" style={`--reveal-delay:${i * 90}ms`}>
+              <h3 class="text-lg font-semibold tracking-tight">{item.title}</h3>
+              <p class="mt-2 text-[15px] leading-relaxed text-fg-2">
+                {item.body}
+                {i === 2 && <> <a href={REPO_URL} class="text-choco-light underline-offset-4 hover:underline">GitHub →</a></>}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= CTA ================= -->
+    <section class="relative isolate overflow-hidden border-t border-white/[0.06] py-24 text-center">
+      <div aria-hidden="true" class="absolute left-1/2 top-1/2 -z-10 h-[30rem] w-[60rem] -translate-x-1/2 -translate-y-1/2 bg-[radial-gradient(closest-side,rgb(165_83_167/0.3),transparent)]"></div>
+      <img src={url('icon.png')} alt="" width="88" height="88" class="reveal mx-auto size-[88px] animate-float drop-shadow-[0_18px_30px_rgb(0_0_0/0.45)]" />
+      <h2 class="reveal mx-auto mt-6 max-w-2xl px-4 text-3xl font-bold tracking-tight md:text-5xl"><span class="inline-block">{t.hero.title[0]}</span><br /><span class="inline-block">{t.hero.title[1]}</span></h2>
+      <div class="reveal mt-9"><DownloadButton t={t.download} /></div>
+    </section>
+  </main>
+
+  <footer class="border-t border-white/[0.06] py-12 text-sm text-fg-3">
+    <div class="mx-auto grid w-[min(1120px,100%-2rem)] gap-1.5">
+      {t.footer.lines.map((l) => <p>{l}</p>)}
+      <p>{t.footer.copyright} · {t.footer.font}: <a class="underline-offset-4 hover:text-fg hover:underline" href={url('fonts/Inter-OFL.txt')}>Inter (SIL OFL 1.1)</a></p>
+    </div>
+  </footer>
+</Base>

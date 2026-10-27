@@ -79,7 +79,7 @@ struct ChocoButtonStyle: ButtonStyle {
                 if let keyHint { KeyChip(text: keyHint) }
             }
             .foregroundStyle(palette.foreground)
-            .padding(.horizontal, ChocoSpace.lg).frame(height: 32)
+            .padding(.horizontal, ChocoSpace.lg).frame(height: ChocoSpace.u(32))
             .background(palette.background, in: shape)
             .overlay { if let border = palette.border { shape.strokeBorder(border, lineWidth: 1) } }
             .opacity(palette.opacity)
@@ -94,7 +94,7 @@ struct ChocoButtonStyle: ButtonStyle {
         let text: String
         var body: some View {
             Text(text).font(ChocoTheme.font(9, weight: .bold)).foregroundStyle(ChocoTheme.Dialog.text).opacity(0.85)
-                .padding(.horizontal, 6).padding(.vertical, ChocoSpace.xxs)
+                .padding(.horizontal, ChocoSpace.u(6)).padding(.vertical, ChocoSpace.xxs)
                 .background(ChocoTheme.Dialog.chip, in: RoundedRectangle(cornerRadius: 4))
                 .accessibilityHidden(true)
         }

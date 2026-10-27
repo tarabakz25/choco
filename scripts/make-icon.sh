@@ -1,5 +1,5 @@
 #!/bin/bash
-# 仮アプリアイコンを生成する: AppSupport/AppIcon.icns と site/assets/icon.png
+# 仮アプリアイコンを生成する: AppSupport/AppIcon.icns と site/public/icon.png
 set -euo pipefail
 cd "$(dirname "$0")/.."
 mkdir -p .build/ModuleCache
@@ -26,6 +26,6 @@ render icon_512x512.png 512
 render icon_512x512@2x.png 1024
 
 iconutil -c icns "$iconset" -o AppSupport/AppIcon.icns
-mkdir -p site/assets
-cp "$iconset/icon_512x512.png" site/assets/icon.png
-printf 'Generated: AppSupport/AppIcon.icns, site/assets/icon.png\n'
+mkdir -p site/public
+cp "$iconset/icon_512x512.png" site/public/icon.png
+printf 'Generated: AppSupport/AppIcon.icns, site/public/icon.png\n'
