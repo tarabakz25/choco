@@ -27,6 +27,11 @@ import WebKit
     var favoriteDropIndex: Int?
     /// The pointer is over the Favorites area with a droppable tab; the drag image shrinks to a tile.
     var dragOverFavorites = false
+    /// While the window colour is between two Spaces: a swipe sets `progress` with the fingers, a plain switch animates it.
+    private(set) var spaceBlend: SpaceBlend?
+    /// Mirrors the in-app motion preference (set by the window); a Space switch then changes the colour at once.
+    var reducesMotion = false
+    @ObservationIgnored private var spaceBlendTask: Task<Void, Never>?
     @ObservationIgnored weak var browserWindow: NSWindow?
     @ObservationIgnored private var favoriteSessions: [String: UUID] = [:]
     @ObservationIgnored private var knownURLs: [UUID: String] = [:]
@@ -122,9 +127,71 @@ import WebKit
             }
         default: break
         }
+        let previousSpaceID = store.state.selectedSpaceID
         store.send(action)
+        followSpaceChange(from: previousSpaceID, to: store.state.selectedSpaceID)
         focusedPaneID = store.state.selectedTabID
         reconcile()
+    }
+
+    struct SpaceBlend: Equatable {
+        var from: UUID
+        var to: UUID
+        var progress: Double
+    }
+
+    /// Palette of a Space, or of the selected one when the id is unknown.
+    func spaceTheme(for id: UUID) -> SpaceTheme {
+        SpaceTheme(colorHex: state.spaces.first { $0.id == id }?.colorHex ?? selectedSpace?.colorHex)
+    }
+
+    /// The palette the window shows right now: the selected Space's, or the mix while a switch is under way.
+    var currentSpaceTheme: SpaceTheme {
+        guard let blend = spaceBlend else { return spaceTheme(for: state.selectedSpaceID) }
+        return spaceTheme(for: blend.from).mixed(with: spaceTheme(for: blend.to), t: blend.progress)
+    }
+
+    /// A finger-driven blend: `progress` follows the swipe with no animation.
+    func dragSpaceBlend(from: UUID, to: UUID, progress: Double) {
+        spaceBlendTask?.cancel()
+        spaceBlend = SpaceBlend(from: from, to: to, progress: progress)
+    }
+
+    /// Drops any blend (the swipe is resisting at the first or last Space).
+    func clearSpaceBlend() {
+        spaceBlendTask?.cancel()
+        spaceBlend = nil
+    }
+
+    /// Carries a blend on from where it is to `progress` (1 finishes the switch, 0 settles back) on the Space spring.
+    func settleSpaceBlend(to progress: Double) {
+        spaceBlendTask?.cancel()
+        guard spaceBlend != nil else { return }
+        guard !reducesMotion else { spaceBlend = nil; return }
+        spaceBlendTask = Task { @MainActor [weak self] in
+            // Let the last frame of the swipe land first, so a quick flick still has a colour to ease away from.
+            do { try await Task.sleep(for: .milliseconds(20)) } catch { return }
+            withAnimation(ChocoMotion.space) { self?.spaceBlend?.progress = progress }
+            do { try await Task.sleep(for: .milliseconds(360)) } catch { return }
+            self?.spaceBlend = nil
+        }
+    }
+
+    /// Whatever changed the selected Space (a dot, a shortcut, the command bar, a tab in another Space), the window
+    /// colour eases across from the old Space's palette. A swipe has already started this blend itself.
+    private func followSpaceChange(from old: UUID, to new: UUID) {
+        guard old != new else { return }
+        if let blend = spaceBlend, blend.from == old, blend.to == new { return }
+        spaceBlendTask?.cancel()
+        guard !reducesMotion else { spaceBlend = nil; return }
+        spaceBlend = SpaceBlend(from: old, to: new, progress: 0)
+        spaceBlendTask = Task { @MainActor [weak self] in
+            // One frame at the old colour, so the change has a start to animate from.
+            do { try await Task.sleep(for: .milliseconds(16)) } catch { return }
+            withAnimation(ChocoMotion.space) { self?.spaceBlend?.progress = 1 }
+            do { try await Task.sleep(for: .milliseconds(360)) } catch { return }
+            self?.spaceBlend = nil
+        }
     }
 
     /// The page that browser shortcuts act on: a detached window's own page while it is key, else the active tab.
