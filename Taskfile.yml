@@ -64,11 +64,7 @@ tasks:
     deps: [build]
     cmds:
       # open は起動中のアプリを前面に出すだけで再起動しないため、先に終了させる
-      - |
-        osascript -e 'tell application id "org.ossarc.browser" to quit' >/dev/null 2>&1 || true
-        for _ in $(seq 100); do pgrep -qx choco-browser || break; sleep 0.1; done
-        pkill -x choco-browser || true
-        open {{.APP}}
+      - ./scripts/relaunch-app.sh {{.APP}}
 
   test:
     desc: 非UIテストを実行（追加引数は task test -- --filter BrowserAppTests）
