@@ -14,6 +14,17 @@ enum ChocoMotion {
     static let siteOpacity = ease(0.14).delay(0.05)
     /// Space switch: 320 ms spring (the window colour mode and the page area follow it).
     static let space = Animation(FigmaSampledSpring(duration: 0.32))
+    /// Space switch timeline (163:7447): the lists slide on `space`; the outgoing one fades over 160 ms from the start,
+    /// the incoming one over 180 ms and the dots over 160 ms, both 40 ms in; the active indicator follows the spring 40 ms in.
+    /// Letting go of a swipe: the same spring, stretched when `distance` is long enough that its fastest moment (about
+    /// 5.2 times the average speed) would pass `maxSpeed`. Short moves keep the 320 ms.
+    static func spaceSettle(distance: CGFloat, maxSpeed: CGFloat) -> Animation {
+        Animation(FigmaSampledSpring(duration: max(0.32, 5.2 * Double(distance) / Double(maxSpeed))))
+    }
+    static let spaceListFadeOut = ease(0.16)
+    static let spaceListFadeIn = ease(0.18).delay(0.04)
+    static let spaceDotFade = ease(0.16).delay(0.04)
+    static let spaceIndicator = Animation(FigmaSampledSpring(duration: 0.32)).delay(0.04)
 
     /// New menu (149:7410): 280 ms spring for the panel and the plus-to-x rotation; opacity 140 ms;
     /// rows follow 40 ms later, 30 ms apart, fading over 140 ms and rising 4pt over 200 ms.

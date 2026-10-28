@@ -2,6 +2,7 @@
 import AppKit
 import BrowserCore
 import Foundation
+import SwiftUI
 import Testing
 
 @Suite(.serialized) @MainActor struct DesignIntegrationTests {
@@ -32,13 +33,25 @@ import Testing
         #expect(ChocoSpace.u(13) == 13)
     }
 
-    @Test func spaceColourSelectsTokenMode() {
+    @Test func spaceColourBuildsAPaletteFromItsHue() {
         #expect(SpaceTheme(colorHex: nil) == .dark)
         #expect(SpaceTheme(colorHex: "808080") == .dark) // grey: no hue
-        #expect(SpaceTheme(colorHex: "7896B8") == .indigo) // default Space colour
-        #expect(SpaceTheme(colorHex: "6C5CE7") == .indigo)
-        #expect(SpaceTheme(colorHex: "2EC4B6") == .teal)
-        #expect(SpaceTheme(colorHex: "E55039") == .dark) // red
+        #expect(SpaceTheme(colorHex: "1A1A1A") == .dark) // near black: no tint
+        // Figma's Indigo and Teal tokens are reproduced exactly at their hues.
+        #expect(SpaceTheme.indigo.sidebar == Color(hex: "262538") && SpaceTheme.teal.sidebar == Color(hex: "213A3A"))
+        // Spaces of different colours no longer share a palette, so switching between them changes the window colour.
+        let blue = SpaceTheme(colorHex: "7896B8"), purple = SpaceTheme(colorHex: "6C5CE7"), teal = SpaceTheme(colorHex: "2EC4B6")
+        let red = SpaceTheme(colorHex: "E55039")
+        #expect(blue != purple && purple != teal && red != .dark && red != teal && red != purple)
+    }
+
+    @Test func mixedThemesMeetTheirEndsAndPassBetween() {
+        let from = SpaceTheme.dark, to = SpaceTheme.teal
+        #expect(from.mixed(with: to, t: 0) == from)
+        #expect(from.mixed(with: to, t: 1) == to)
+        let middle = from.mixed(with: to, t: 0.5)
+        #expect(middle != from && middle != to)
+        #expect(from.mixed(with: to, t: -3) == from && from.mixed(with: to, t: 3) == to)
     }
 
     @Test func closingTransientContextDoesNotArchiveUnderlyingPage() async throws {
