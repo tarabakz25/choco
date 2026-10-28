@@ -230,8 +230,14 @@ struct BrowserWindow: View {
             }
             .shadow(color: .black.opacity(floatingSidebar ? 0.45 : 0), radius: floatingSidebar ? 16 : 0, x: 0, y: 10)
             .overlay(alignment: .trailing) {
-                Rectangle().fill(Color.clear).frame(width: 4).contentShape(Rectangle())
-                    .gesture(DragGesture(minimumDistance: 1).onChanged { value in
+                // Straddles the edge (4pt inside the sidebar, 4pt over the page) so it is easy to grab.
+                Rectangle().fill(Color.clear).frame(width: 8).contentShape(Rectangle()).offset(x: 4)
+                    .onHover { inside in
+                        if inside { NSCursor.resizeLeftRight.push() } else { NSCursor.pop() }
+                    }
+                    // The handle rides on the sidebar's own edge, so a local-space translation would shift every time
+                    // the width changes and feed back into itself (jitter). Measure in the window's space instead.
+                    .gesture(DragGesture(minimumDistance: 1, coordinateSpace: .global).onChanged { value in
                         if sidebarDragStart == nil { sidebarDragStart = sidebarWidth }
                         var transaction = Transaction(); transaction.animation = nil
                         withTransaction(transaction) {
