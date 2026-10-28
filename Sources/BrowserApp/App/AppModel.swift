@@ -337,6 +337,13 @@ import WebKit
             guard let self, let tabID else { return }
             self.send(.closeTab(tabID))
         }
+        session.onStoreInstallRequest = { [weak self, weak session] url, title in
+            guard let self else { return }
+            Task {
+                await self.extensionHost.installFromStore(url.absoluteString, pageTitle: title)
+                session?.finishStoreInstall()
+            }
+        }
     }
 
     func reconcile() {
