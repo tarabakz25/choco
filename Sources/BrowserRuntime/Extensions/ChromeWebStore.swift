@@ -11,6 +11,14 @@ public enum ChromeWebStore {
         return url.pathComponents.first(where: isExtensionID)
     }
 
+    /// The extension ID when `url` is a store detail page (`/detail/<name>/<id>`), not a search, category or other store page.
+    public static func storeDetailID(of url: URL) -> String? {
+        guard let host = url.host?.lowercased(), host == "chromewebstore.google.com" || host == "chrome.google.com" else { return nil }
+        let parts = url.pathComponents
+        guard let detail = parts.firstIndex(of: "detail") else { return nil }
+        return parts.dropFirst(detail + 1).first(where: isExtensionID)
+    }
+
     public static func downloadURL(for id: String) -> URL? {
         guard isExtensionID(id) else { return nil }
         var components = URLComponents(string: "https://clients2.google.com/service/update2/crx")

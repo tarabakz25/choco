@@ -112,7 +112,7 @@ struct ExtensionsSettingsView: View {
             defer { isWorking = false }
             do {
                 let staged = try await stage()
-                guard confirm(staged) else { manager.discard(staged); return }
+                guard model.extensionHost.confirmInstall(staged) else { manager.discard(staged); return }
                 let item = try await manager.commit(staged)
                 storeReference = ""
                 if let error = manager.loadErrors[item.id] {
@@ -127,24 +127,4 @@ struct ExtensionsSettingsView: View {
     }
 
     private func show(_ text: String, isError: Bool) { message = text; messageIsError = isError }
-
-    private func confirm(_ staged: StagedExtension) -> Bool {
-        let alert = NSAlert()
-        alert.messageText = "「\(staged.name)」を追加しますか？"
-        var lines: [String] = []
-        if !staged.version.isEmpty { lines.append("バージョン \(staged.version)") }
-        if staged.permissions.isEmpty && staged.sitePatterns.isEmpty { lines.append("特別な権限は要求されません。") }
-        if !staged.permissions.isEmpty { lines.append("要求する権限: " + staged.permissions.joined(separator: "、")) }
-        if !staged.sitePatterns.isEmpty {
-            let shown = staged.sitePatterns.prefix(8).joined(separator: "、")
-            let rest = staged.sitePatterns.count > 8 ? " ほか\(staged.sitePatterns.count - 8)件" : ""
-            lines.append(staged.sitePatterns.contains { $0 == "<all_urls>" || $0.hasPrefix("*://*/") }
-                ? "すべてのサイトのデータを読み取り・変更できます。"
-                : "アクセスするサイト: \(shown)\(rest)")
-        }
-        alert.informativeText = lines.joined(separator: "\n")
-        alert.addButton(withTitle: "追加")
-        alert.addButton(withTitle: "キャンセル")
-        return alert.runModal() == .alertFirstButtonReturn
-    }
 }

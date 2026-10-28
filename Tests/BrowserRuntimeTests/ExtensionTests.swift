@@ -14,6 +14,15 @@ struct ChromeWebStoreTests {
         #expect(ChromeWebStore.extensionID(from: "https://chrome.google.com/webstore/detail/\(id)") == id)
     }
 
+    @Test func recognisesOnlyStoreDetailPages() throws {
+        func detail(_ text: String) throws -> String? { ChromeWebStore.storeDetailID(of: try #require(URL(string: text))) }
+        #expect(try detail("https://chromewebstore.google.com/detail/ublock-origin-lite/\(id)?hl=ja") == id)
+        #expect(try detail("https://chrome.google.com/webstore/detail/\(id)") == id)
+        #expect(try detail("https://chromewebstore.google.com/search/\(id)") == nil)
+        #expect(try detail("https://chromewebstore.google.com/category/extensions") == nil)
+        #expect(try detail("https://example.com/detail/x/\(id)") == nil)
+    }
+
     @Test func rejectsOtherInput() {
         #expect(ChromeWebStore.extensionID(from: "") == nil)
         #expect(ChromeWebStore.extensionID(from: "ublock") == nil)
