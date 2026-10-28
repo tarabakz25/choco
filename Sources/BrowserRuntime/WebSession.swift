@@ -23,17 +23,20 @@ public final class WebSession: NSObject {
     @ObservationIgnored public var onPageChange: ((URL?, String) -> Void)?
     @ObservationIgnored public var onOpenWindow: ((WKWebViewConfiguration, URL?) -> WKWebView?)?
     @ObservationIgnored public var onClose: (() -> Void)?
+    /// The user pressed the "Add to Choco" button on a Chrome Web Store detail page. Carries the page URL and title.
+    @ObservationIgnored public var onStoreInstallRequest: ((URL, String) -> Void)?
     /// Fires after any observed page state (URL, title, loading, history) changed.
     @ObservationIgnored public var onStateChange: ((WebSession) -> Void)?
     @ObservationIgnored private var observations: [NSKeyValueObservation] = []
     @ObservationIgnored private var downloads: [ObjectIdentifier: DownloadTransfer] = [:]
     @ObservationIgnored private var isDisposed = false
+    @ObservationIgnored private var hasStoreBridge = false
     @ObservationIgnored private var lastReportedURL: URL?
     @ObservationIgnored private var lastReportedTitle = ""
     @ObservationIgnored private var pendingScroll: PageScrollOffset?
 
     public init(id: UUID, profileID: UUID, initialURL: URL? = nil, restoreScroll: PageScrollOffset? = nil, configuration: WKWebViewConfiguration? = nil,
-                extensionController: WKWebExtensionController? = nil) {
+                extensionController: WKWebExtensionController? = nil, installsStoreBridge: Bool = true) {
         self.id = id
         self.profileID = profileID
         let hasInvalidProfileIdentifier = profileID.uuidString == "00000000-0000-0000-0000-000000000000"
@@ -43,6 +46,7 @@ public final class WebSession: NSObject {
             // WebKit raises an Objective-C exception for the zero UUID. A
             // corrupt profile must never crash the app or use another profile.
             configuration.websiteDataStore = hasInvalidProfileIdentifier ? .nonPersistent() : WKWebsiteDataStore(forIdentifier: profileID)
+            configuration.webExtensionController = extensionController
             return configuration
         }()
         if let extensionController { configuration.webExtensionController = extensionController }
@@ -51,6 +55,8 @@ public final class WebSession: NSObject {
         webView.navigationDelegate = self
         webView.uiDelegate = self
         webView.allowsBackForwardNavigationGestures = true
+        // A popup shares its opener's content controller, which already carries the bridge (and a second handler of the same name would raise).
+        if installsStoreBridge { installStoreBridge() }
         if hasInvalidProfileIdentifier {
             errorMessage = Localizer().text("The profile identifier is invalid. Login information for this tab will not be saved. Create a new profile.")
         }
@@ -109,6 +115,7 @@ public final class WebSession: NSObject {
         webView.stopLoading()
         webView.navigationDelegate = nil
         webView.uiDelegate = nil
+        if hasStoreBridge { webView.configuration.userContentController.removeScriptMessageHandler(forName: StoreInstallBridge.handlerName) }
         observations.forEach { $0.invalidate() }
         observations.removeAll()
         for transfer in downloads.values {
@@ -125,6 +132,25 @@ public final class WebSession: NSObject {
         onOpenWindow = nil
         onClose = nil
         onStateChange = nil
+        onStoreInstallRequest = nil
+    }
+
+    /// Tells a Web Store page that the install it requested has ended, so its button stops showing progress.
+    public func finishStoreInstall() {
+        guard !isDisposed else { return }
+        webView.evaluateJavaScript("window.__chocoStoreInstallFinished && window.__chocoStoreInstallFinished()") { _, _ in }
+    }
+
+    private func installStoreBridge() {
+        let controller = webView.configuration.userContentController
+        controller.addUserScript(StoreInstallBridge.makeScript())
+        controller.add(StoreInstallMessageHandler { [weak self] message in
+            // Only a real store detail page in the main frame may start an install, whatever the page's script claims.
+            guard let self, message.frameInfo.isMainFrame, let url = message.frameInfo.request.url,
+                  ChromeWebStore.storeDetailID(of: url) != nil else { return }
+            self.onStoreInstallRequest?(url, self.webView.title ?? "")
+        }, name: StoreInstallBridge.handlerName)
+        hasStoreBridge = true
     }
 
     private func observeWebView() {

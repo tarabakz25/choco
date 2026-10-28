@@ -53,7 +53,7 @@ public final class WebSessionPool {
         // intentionally not accepted until private-window ownership is modeled.
         guard configuration.websiteDataStore.identifier == profileID else { return nil }
         remove(id: id)
-        let session = WebSession(id: id, profileID: profileID, configuration: configuration)
+        let session = WebSession(id: id, profileID: profileID, configuration: configuration, installsStoreBridge: false)
         sessions[id] = session
         onSessionAdded?(session)
         return session

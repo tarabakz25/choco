@@ -43,10 +43,12 @@ public final class ExtensionManager {
     @ObservationIgnored private var readyProfiles: Set<UUID> = []
     @ObservationIgnored private var waiters: [UUID: [@MainActor () -> Void]] = [:]
     @ObservationIgnored private var syncTask: Task<Void, Never>?
+    @ObservationIgnored private let chromeVersions: ChromeVersionResolver
 
-    public init(directory: URL) {
+    public init(directory: URL, chromeVersions: ChromeVersionResolver? = nil) {
         root = directory
         installed = Self.loadCatalog(in: directory)
+        self.chromeVersions = chromeVersions ?? ChromeVersionResolver(cacheURL: directory.appendingPathComponent("chrome-version.json"))
     }
 
     private var packagesDirectory: URL { root.appendingPathComponent("Packages", isDirectory: true) }
@@ -117,7 +119,8 @@ public final class ExtensionManager {
 
     /// Downloads a Chrome Web Store extension by listing URL or ID. The CRX signature is not verified.
     public func stage(storeReference: String) async throws -> StagedExtension {
-        guard let id = ChromeWebStore.extensionID(from: storeReference), let url = ChromeWebStore.downloadURL(for: id) else {
+        guard let id = ChromeWebStore.extensionID(from: storeReference) else { throw ExtensionError.invalidSource }
+        guard let url = ChromeWebStore.downloadURL(for: id, chromeVersion: await chromeVersions.current()) else {
             throw ExtensionError.invalidSource
         }
         let data: Data
@@ -242,12 +245,12 @@ public final class ExtensionManager {
         for work in waiters.removeValue(forKey: profileID) ?? [] { work() }
     }
 
+    /// Looks records up by ID on disk rather than through loaded contexts, which are already gone (or never loaded, if disabled).
     private func wipeStoredData(of id: String) async {
+        let types = WKWebExtensionController.allExtensionDataTypes
         for controller in controllers.values {
-            for context in controller.extensionContexts where context.uniqueIdentifier == id {
-                let record = await controller.dataRecord(ofTypes: WKWebExtensionController.allExtensionDataTypes, for: context)
-                if let record { await controller.removeData(ofTypes: WKWebExtensionController.allExtensionDataTypes, from: [record]) }
-            }
+            let records = await controller.dataRecords(ofTypes: types).filter { $0.uniqueIdentifier == id }
+            if !records.isEmpty { await controller.removeData(ofTypes: types, from: records) }
         }
     }
 

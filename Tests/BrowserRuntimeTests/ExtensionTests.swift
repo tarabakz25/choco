@@ -14,6 +14,23 @@ struct ChromeWebStoreTests {
         #expect(ChromeWebStore.extensionID(from: "https://chrome.google.com/webstore/detail/\(id)") == id)
     }
 
+    @Test func recognisesOnlyStoreDetailPages() throws {
+        func detail(_ text: String) throws -> String? { ChromeWebStore.storeDetailID(of: try #require(URL(string: text))) }
+        #expect(try detail("https://chromewebstore.google.com/detail/ublock-origin-lite/\(id)?hl=ja") == id)
+        #expect(try detail("https://chrome.google.com/webstore/detail/\(id)") == id)
+        #expect(try detail("https://chromewebstore.google.com/search/\(id)") == nil)
+        #expect(try detail("https://chromewebstore.google.com/category/extensions") == nil)
+        #expect(try detail("https://example.com/detail/x/\(id)") == nil)
+    }
+
+    @Test func readsTheExtensionNameFromAStoreTabTitle() {
+        #expect(ChromeWebStore.extensionName(fromPageTitle: "Dark Reader - Chrome ウェブストア") == "Dark Reader")
+        #expect(ChromeWebStore.extensionName(fromPageTitle: "  uBlock Origin Lite - Chrome Web Store ") == "uBlock Origin Lite")
+        #expect(ChromeWebStore.extensionName(fromPageTitle: "Item not available") == nil)
+        #expect(ChromeWebStore.extensionName(fromPageTitle: " - Chrome ウェブストア") == nil)
+        #expect(ChromeWebStore.extensionName(fromPageTitle: nil) == nil)
+    }
+
     @Test func rejectsOtherInput() {
         #expect(ChromeWebStore.extensionID(from: "") == nil)
         #expect(ChromeWebStore.extensionID(from: "ublock") == nil)
@@ -29,6 +46,14 @@ struct ChromeWebStoreTests {
         let components = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false))
         #expect(components.queryItems?.first { $0.name == "x" }?.value?.hasPrefix("id=\(id)&") == true)
         #expect(components.queryItems?.first { $0.name == "acceptformat" }?.value == "crx3")
+    }
+
+    @Test func downloadURLAnnouncesTheGivenChromeVersion() throws {
+        func prodversion(_ url: URL?) throws -> String? {
+            URLComponents(url: try #require(url), resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "prodversion" }?.value
+        }
+        #expect(try prodversion(ChromeWebStore.downloadURL(for: id, chromeVersion: "156.0.8078.74")) == "156.0.8078.74")
+        #expect(try prodversion(ChromeWebStore.downloadURL(for: id)) == ChromeVersionResolver.fallback)
     }
 
     @Test func unwrapsCRXHeaders() throws {
@@ -171,5 +196,80 @@ struct ExtensionManagerTests {
         let manager = ExtensionManager(directory: directory.appendingPathComponent("Extensions"))
         await #expect(throws: ExtensionError.self) { try await manager.stage(fileURL: directory) }
         await #expect(throws: ExtensionError.self) { try await manager.stage(fileURL: directory.appendingPathComponent("missing")) }
+    }
+}
+
+private final class Probe: @unchecked Sendable {
+    private let lock = NSLock()
+    private var _calls = 0
+    private var _date = Date(timeIntervalSince1970: 1_000_000)
+    var result: Result<String, Error> = .success("156.0.8078.74")
+    var calls: Int { lock.withLock { _calls } }
+    var date: Date {
+        get { lock.withLock { _date } }
+        set { lock.withLock { _date = newValue } }
+    }
+    func fetch() throws -> String {
+        lock.withLock { _calls += 1 }
+        return try result.get()
+    }
+}
+
+@Suite("Chrome version resolver")
+struct ChromeVersionResolverTests {
+    private func makeResolver(_ probe: Probe, cacheURL: URL? = nil) -> ChromeVersionResolver {
+        ChromeVersionResolver(cacheURL: cacheURL, fetch: { try probe.fetch() }, now: { probe.date })
+    }
+
+    @Test func usesTheFetchedVersionAndCachesItForADay() async {
+        let probe = Probe()
+        let resolver = makeResolver(probe)
+        #expect(await resolver.current() == "156.0.8078.74")
+        #expect(await resolver.current() == "156.0.8078.74")
+        #expect(probe.calls == 1)
+
+        probe.result = .success("157.0.1.2")
+        probe.date.addTimeInterval(ChromeVersionResolver.timeToLive + 1)
+        #expect(await resolver.current() == "157.0.1.2")
+        #expect(probe.calls == 2)
+    }
+
+    @Test func fallsBackWhenOfflineAndNothingIsCached() async {
+        let probe = Probe()
+        probe.result = .failure(URLError(.notConnectedToInternet))
+        #expect(await makeResolver(probe).current() == ChromeVersionResolver.fallback)
+    }
+
+    @Test func keepsTheStaleVersionWhenARefreshFails() async {
+        let probe = Probe()
+        let resolver = makeResolver(probe)
+        #expect(await resolver.current() == "156.0.8078.74")
+        probe.result = .failure(URLError(.timedOut))
+        probe.date.addTimeInterval(ChromeVersionResolver.timeToLive * 3)
+        #expect(await resolver.current() == "156.0.8078.74")
+    }
+
+    @Test func rejectsMalformedVersions() async {
+        let probe = Probe()
+        probe.result = .success("<html>error</html>")
+        #expect(await makeResolver(probe).current() == ChromeVersionResolver.fallback)
+        #expect(ChromeVersionResolver.isVersion("156.0.8078.74"))
+        #expect(!ChromeVersionResolver.isVersion("156"))
+        #expect(!ChromeVersionResolver.isVersion("156..1"))
+        #expect(!ChromeVersionResolver.isVersion("1.2.3.4.5"))
+        #expect(!ChromeVersionResolver.isVersion("a.b"))
+    }
+
+    @Test func persistsTheVersionAcrossLaunches() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("ChromeVersion-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let cacheURL = directory.appendingPathComponent("chrome-version.json")
+        let probe = Probe()
+        #expect(await makeResolver(probe, cacheURL: cacheURL).current() == "156.0.8078.74")
+
+        let offline = Probe()
+        offline.result = .failure(URLError(.notConnectedToInternet))
+        #expect(await makeResolver(offline, cacheURL: cacheURL).current() == "156.0.8078.74")
+        #expect(offline.calls == 0)
     }
 }

@@ -71,6 +71,12 @@ Webページの内容、ユーザーが付けた名前、既存のSpace・Profil
 
 翻訳は`Sources/BrowserLocalization/Resources/{ja,en}.lproj/Localizable.strings`で管理します。新しいUI文字列は共通の`Localizer`を通し、両言語の翻訳を追加してください。
 
+## Chrome拡張機能
+
+設定の「Extensions」から、拡張機能のフォルダ（`manifest.json`があるもの）、ZIP、CRXを追加できます。ChromeウェブストアのURLまたは拡張機能IDを入力すると、ストアからCRXを取得して追加します（CRXの署名は検証しません）。追加時に要求される権限を確認し、許可すると全Profileで有効になります。拡張機能のボタンはサイトの操作パネルの「拡張機能」に並び、クリックするとポップアップまたは拡張機能の処理が実行されます。
+
+Profileごとに別のWebKit拡張コントローラを使い、拡張機能はそのProfileのCookieを参照します。拡張機能本体は`Application Support/OssArc/Extensions`に保存します。WebKitが未対応のChrome API、拡張機能のキーボードショートカット、コンテキストメニュー項目、ツールバー固定表示、プライベート閲覧、別ウィンドウへ切り出したタブでの拡張機能の操作は未対応です。
+
 ## データとプライバシー
 
 タブ構成はApplication Support内の`OssArc/state.json`へ保存します。アプリをサンドボックス付きで起動した場合はアプリ専用コンテナ内になります。WebサイトのCookieなどはProfileごとにWebKitの永続データストアへ保存します。別Profileへの移動ではログイン状態をコピーしません。お気に入りのリンク定義は全Space共通、実際の閲覧状態はProfileごとです。

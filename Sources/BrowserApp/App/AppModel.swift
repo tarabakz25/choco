@@ -15,6 +15,10 @@ import WebKit
     var commandText = ""
     var commandError: String?
     var editor: EditorRequest?
+    /// Extension install dialogs in the order they were asked for; the first one is on screen.
+    private(set) var extensionDialogs: [ExtensionDialogRequest] = []
+    var extensionDialog: ExtensionDialogRequest? { extensionDialogs.first }
+    @ObservationIgnored private var extensionDialogContinuations: [UUID: CheckedContinuation<Bool, Never>] = [:]
     var showsArchive = false
     var showsSiteControls = false
     var showsNewMenu = false
@@ -72,7 +76,11 @@ import WebKit
         extensionHost.model = self
         extensions.delegate = extensionHost
         pool.extensions = extensions
-        pool.onSessionAdded = { [extensionHost] session in extensionHost.sessionAdded(session) }
+        pool.onSessionAdded = { [weak self, extensionHost] session in
+            extensionHost.sessionAdded(session)
+            // Sessions are created when their view mounts, after reconcile has already run.
+            self?.notifyExtensionsOfDisplayedSession()
+        }
         pool.onSessionRemoved = { [extensionHost] session in extensionHost.sessionRemoved(session) }
         if state.tabs.count == 1, let tab = state.tabs.first, tab.url == "about:blank", state.archive.isEmpty,
            let index = arguments.firstIndex(of: "--initial-url"), arguments.indices.contains(index + 1),
@@ -108,6 +116,18 @@ import WebKit
         if let id = navigationTabID, let tab = state.tabs.first(where: { $0.id == id }) { return session(for: tab) }
         if let id = state.selectedFavoriteID, let favorite = state.favorites.first(where: { $0.id == id }) { return session(for: favorite) }
         return nil
+    }
+
+    /// The session in front, including a displayed favorite, which has no tab ID.
+    private var displayedSession: WebSession? {
+        if let id = navigationTabID { return pool.existing(id: id) }
+        guard let id = state.selectedFavoriteID else { return nil }
+        let profile = selectedSpace?.profileID ?? state.profiles[0].id
+        return favoriteSessions["\(id):\(profile)"].flatMap { pool.existing(id: $0) }
+    }
+
+    private func notifyExtensionsOfDisplayedSession() {
+        extensionHost.activeTabMayHaveChanged(to: displayedSession)
     }
 
     func send(_ action: BrowserAction) {
@@ -211,6 +231,22 @@ import WebKit
 
     func showMainWindow() { browserWindow?.makeKeyAndOrderFront(nil) }
 
+    /// Shows an extension install dialog and waits for it. Returns whether the user confirmed; an error dialog's OK counts as confirming.
+    /// Dialogs asked for while another is open wait their turn.
+    func presentExtensionDialog(_ content: ExtensionDialogContent, surface: ExtensionDialogSurface = .browser) async -> Bool {
+        let request = ExtensionDialogRequest(content: content, surface: surface)
+        return await withCheckedContinuation { continuation in
+            extensionDialogContinuations[request.id] = continuation
+            extensionDialogs.append(request)
+        }
+    }
+
+    func resolveExtensionDialog(_ confirmed: Bool) {
+        guard !extensionDialogs.isEmpty else { return }
+        let request = extensionDialogs.removeFirst()
+        extensionDialogContinuations.removeValue(forKey: request.id)?.resume(returning: confirmed)
+    }
+
     func showCommand(_ mode: CommandMode) {
         showMainWindow()
         showsSiteControls = false
@@ -301,6 +337,13 @@ import WebKit
             guard let self, let tabID else { return }
             self.send(.closeTab(tabID))
         }
+        session.onStoreInstallRequest = { [weak self, weak session] url, title in
+            guard let self else { return }
+            Task {
+                await self.extensionHost.installFromStore(url.absoluteString, pageTitle: title)
+                session?.finishStoreInstall()
+            }
+        }
     }
 
     func reconcile() {
@@ -340,7 +383,8 @@ import WebKit
         let memoryIDs = Set(lastInteraction.keys).union(scrollAnchors.keys).union(activityFlags.keys)
         for id in memoryIDs where !validRuntimes.contains(id) { clearHibernationMemory(id) }
         rememberSelectedTab()
-        extensionHost.activeTabMayHaveChanged(to: navigationTabID.flatMap { pool.existing(id: $0) })
+        extensionHost.pruneClosedTabs()
+        notifyExtensionsOfDisplayedSession()
         scheduleHibernationIfOverCapacity()
     }
 

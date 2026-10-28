@@ -30,7 +30,8 @@ struct BrowserWindow: View {
     /// switch (320 ms spring) or a swipe drags it, so it is never given an animation of its own here.
     private var themeBackground: some View { theme.sidebar }
     private var commandPresented: Bool { model.commandMode != nil }
-    private var modalPresented: Bool { commandPresented || model.showsSiteControls || model.showsNewMenu }
+    private var extensionDialogPresented: Bool { model.extensionDialog?.surface == .browser }
+    private var modalPresented: Bool { commandPresented || model.showsSiteControls || model.showsNewMenu || extensionDialogPresented }
     private var sidebarPresented: Bool { !model.showsArchive && (model.state.sidebarVisible || sidebarPeek) }
     private var floatingSidebar: Bool { sidebarPeek && !model.state.sidebarVisible && !model.showsArchive }
     private var sidebarPose: Int { model.showsArchive ? 3 : model.state.sidebarVisible ? 2 : sidebarPeek ? 1 : 0 }
@@ -75,6 +76,7 @@ struct BrowserWindow: View {
                 // Stable geometry parent: only the actual palette/backdrop enters or
                 // exits. This never changes the page's structural parent or WebView.
                 commandLayer
+                extensionDialogLayer(size: geometry.size)
             }
             .animation(opacityAnimation, value: model.showsArchive)
         }
@@ -205,9 +207,9 @@ struct BrowserWindow: View {
             }
             .background(ChocoTheme.content)
             .overlay {
-                Color.black.opacity(commandPresented ? 0.55 : 0)
+                Color.black.opacity(commandPresented || extensionDialogPresented ? 0.55 : 0)
                     .allowsHitTesting(false)
-                    .animation(commandAnimation, value: commandPresented)
+                    .animation(commandAnimation, value: commandPresented || extensionDialogPresented)
             }
             .clipShape(RoundedRectangle(cornerRadius: ChocoTheme.contentRadius))
             .padding(.top, ChocoTheme.contentInset).padding(.trailing, ChocoTheme.contentInset).padding(.bottom, ChocoTheme.contentInset)
@@ -288,6 +290,14 @@ struct BrowserWindow: View {
         }
         .allowsHitTesting(commandPresented)
         .accessibilityHidden(!commandPresented)
+    }
+
+    /// Figma 8b / 8d / 8e: the dialog is centred over the page, beside a docked sidebar. The page's own dim is in `mainLayout`.
+    private func extensionDialogLayer(size: CGSize) -> some View {
+        let inset = model.showsArchive ? ChocoTheme.archiveWidth : model.state.sidebarVisible ? sidebarWidth : 0
+        return ExtensionDialogLayer(model: model, surface: .browser)
+            .frame(width: max(0, size.width - inset), height: size.height)
+            .offset(x: inset)
     }
 
     private func revealSidebar() {

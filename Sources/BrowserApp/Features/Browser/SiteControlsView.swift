@@ -1,5 +1,6 @@
 import AppKit
 import BrowserCore
+import BrowserRuntime
 import SwiftUI
 import WebKit
 

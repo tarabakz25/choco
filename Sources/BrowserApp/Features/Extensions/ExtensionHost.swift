@@ -8,7 +8,7 @@ import WebKit
 @MainActor final class ExtensionHost: NSObject, WKWebExtensionControllerDelegate {
     weak var model: AppModel?
     private let manager: ExtensionManager
-    private var tabsBySession: [UUID: ExtensionTab] = [:]
+    private var tabsByID: [UUID: ExtensionTab] = [:]
     private var windowsByProfile: [UUID: ExtensionWindow] = [:]
     private var lastActiveByProfile: [UUID: UUID] = [:]
     private var activeSessionID: UUID?
@@ -33,50 +33,94 @@ import WebKit
         return model?.browserWindow
     }
 
+    func record(for id: UUID) -> BrowserTab? { model?.state.tabs.first { $0.id == id } }
+
+    private func profileID(of record: BrowserTab) -> UUID? {
+        model?.state.spaces.first { $0.id == record.spaceID }?.profileID
+    }
+
+    /// Every Core tab of the profile, whether or not its page has been created, then any session that is not a Core tab (favorites).
     func tabs(profileID: UUID) -> [ExtensionTab] {
-        let order = model?.state.tabs.map(\.id) ?? []
-        return tabsBySession.values.filter { $0.session.profileID == profileID }.sorted {
-            (order.firstIndex(of: $0.session.id) ?? .max) < (order.firstIndex(of: $1.session.id) ?? .max)
+        guard let model else { return [] }
+        var result: [ExtensionTab] = []
+        for record in model.state.tabs where self.profileID(of: record) == profileID {
+            if let existing = tabsByID[record.id], existing.profileID == profileID { result.append(existing); continue }
+            let tab = ExtensionTab(id: record.id, profileID: profileID, session: nil, host: self)
+            tabsByID[record.id] = tab
+            result.append(tab)
         }
+        let recordIDs = Set(model.state.tabs.map(\.id))
+        result += tabsByID.values.filter { !recordIDs.contains($0.id) && $0.profileID == profileID && $0.session != nil }
+        return result
     }
 
     func activeTab(profileID: UUID) -> ExtensionTab? {
-        if let current = activeSessionID, let tab = tabsBySession[current], tab.session.profileID == profileID { return tab }
-        return lastActiveByProfile[profileID].flatMap { tabsBySession[$0] }
+        if let current = activeSessionID, let tab = tabsByID[current], tab.profileID == profileID { return tab }
+        return lastActiveByProfile[profileID].flatMap { tabsByID[$0] }
     }
 
-    func index(of tab: ExtensionTab) -> Int { tabs(profileID: tab.session.profileID).firstIndex { $0 === tab } ?? 0 }
-    func isActive(_ tab: ExtensionTab) -> Bool { activeSessionID == tab.session.id }
-    func isPinned(_ session: WebSession) -> Bool { model?.state.tabs.first { $0.id == session.id }?.isPinned ?? false }
+    func index(of tab: ExtensionTab) -> Int { tabs(profileID: tab.profileID).firstIndex { $0 === tab } ?? 0 }
+    func isActive(_ tab: ExtensionTab) -> Bool { activeSessionID == tab.id }
 
-    func activate(_ session: WebSession) {
-        guard let model, let tab = model.state.tabs.first(where: { $0.id == session.id }) else { return }
+    func activate(_ id: UUID) {
+        guard let model, let tab = record(for: id) else { return }
         model.select(tab)
     }
 
-    func close(_ session: WebSession) {
-        guard let model, model.state.tabs.contains(where: { $0.id == session.id }) else { return }
-        model.send(.closeTab(session.id))
+    func close(_ id: UUID) {
+        guard let model, record(for: id) != nil else { return }
+        model.send(.closeTab(id))
+    }
+
+    /// Creates the page for a tab that has none yet.
+    func mountSession(for id: UUID) -> WebSession? {
+        guard let model, let record = record(for: id) else { return nil }
+        return model.session(for: record)
     }
 
     // MARK: Events from the browser
 
     func sessionAdded(_ session: WebSession) {
-        let tab = ExtensionTab(session: session, host: self)
-        tabsBySession[session.id] = tab
+        let tab: ExtensionTab
+        if let existing = tabsByID[session.id], existing.profileID == session.profileID {
+            tab = existing
+            tab.attach(session)
+        } else {
+            tab = ExtensionTab(id: session.id, profileID: session.profileID, session: session, host: self)
+            tabsByID[session.id] = tab
+        }
         session.onStateChange = { [weak self] session in self?.stateChanged(session) }
-        manager.controller(for: session.profileID).didOpenTab(tab)
+        if !tab.isAnnounced {
+            tab.isAnnounced = true
+            manager.controller(for: session.profileID).didOpenTab(tab)
+        }
     }
 
     func sessionRemoved(_ session: WebSession) {
-        guard let tab = tabsBySession.removeValue(forKey: session.id) else { return }
+        guard let tab = tabsByID[session.id], tab.session === session else { return }
         if lastActiveByProfile[session.profileID] == session.id { lastActiveByProfile[session.profileID] = nil }
         if activeSessionID == session.id { activeSessionID = nil }
-        manager.controller(for: session.profileID).didCloseTab(tab, windowIsClosing: false)
+        // Hibernating a tab drops its page but not the tab. Closing it, or moving it to another profile, ends this tab.
+        if let record = record(for: session.id), profileID(of: record) == session.profileID {
+            tab.detach()
+            return
+        }
+        tabsByID[session.id] = nil
+        if tab.isAnnounced { manager.controller(for: session.profileID).didCloseTab(tab, windowIsClosing: false) }
+    }
+
+    /// Forgets tabs that were closed without ever having a page (a page's own removal is handled by `sessionRemoved`).
+    func pruneClosedTabs() {
+        guard let model else { return }
+        let recordIDs = Set(model.state.tabs.map(\.id))
+        for (id, tab) in tabsByID where tab.session == nil && !recordIDs.contains(id) {
+            tabsByID[id] = nil
+            if tab.isAnnounced { manager.controller(for: tab.profileID).didCloseTab(tab, windowIsClosing: false) }
+        }
     }
 
     private func stateChanged(_ session: WebSession) {
-        guard let tab = tabsBySession[session.id] else { return }
+        guard let tab = tabsByID[session.id] else { return }
         let changed = tab.takeChangedProperties()
         if !changed.isEmpty { manager.controller(for: session.profileID).didChangeTabProperties(changed, for: tab) }
     }
@@ -84,12 +128,12 @@ import WebKit
     /// Call after anything that can change which page is in front.
     func activeTabMayHaveChanged(to session: WebSession?) {
         guard session?.id != activeSessionID else { return }
-        let previous = activeSessionID.flatMap { tabsBySession[$0] }
+        let previous = activeSessionID.flatMap { tabsByID[$0] }
         activeSessionID = session?.id
-        guard let session, let tab = tabsBySession[session.id] else { return }
+        guard let session, let tab = tabsByID[session.id] else { return }
         lastActiveByProfile[session.profileID] = session.id
         let controller = manager.controller(for: session.profileID)
-        let sameProfilePrevious = previous?.session.profileID == session.profileID ? previous : nil
+        let sameProfilePrevious = previous?.profileID == session.profileID ? previous : nil
         controller.didActivateTab(tab, previousActiveTab: sameProfilePrevious)
         controller.didSelectTabs([tab])
         if let sameProfilePrevious { controller.didDeselectTabs([sameProfilePrevious]) }
@@ -99,6 +143,40 @@ import WebKit
     func perform(_ context: WKWebExtensionContext) {
         guard let profileID = context.webExtensionController?.configuration.identifier else { return }
         context.performAction(for: activeTab(profileID: profileID))
+    }
+
+    // MARK: Installing from the Chrome Web Store
+
+    private var isInstalling = false
+
+    /// Asks whether to add the staged extension (Figma 8b). It shows the name and version only: the design retired the permission list.
+    func confirmInstall(_ staged: StagedExtension, surface: ExtensionDialogSurface = .browser) async -> Bool {
+        guard let model else { return false }
+        return await model.presentExtensionDialog(.confirm(name: staged.name, version: staged.version), surface: surface)
+    }
+
+    /// Installs the extension of a Web Store page. The store's own "Add to Chrome" button only works in Chrome,
+    /// so this is the in-app replacement. Success is silent (the extension's button appears in the site controls);
+    /// only failures are reported, in a dialog because the caller's UI is already gone.
+    /// `pageTitle` is the store tab's title, used to name the extension when the download itself fails.
+    func installFromStore(_ reference: String, pageTitle: String? = nil) async {
+        guard !isInstalling, let model else { return }
+        isInstalling = true
+        defer { isInstalling = false }
+        do {
+            let staged = try await manager.stage(storeReference: reference)
+            guard await confirmInstall(staged) else { manager.discard(staged); return }
+            let item = try await manager.commit(staged)
+            if let error = manager.loadErrors[item.id] {
+                _ = await model.presentExtensionDialog(.notice(title: "拡張機能を読み込めませんでした。", lines: ["追加されましたが、読み込めません。", error]))
+            }
+        } catch {
+            var message = error.localizedDescription
+            if case ExtensionError.download(let reason) = error, let name = ChromeWebStore.extensionName(fromPageTitle: pageTitle) {
+                message = "「\(name)」をダウンロードできませんでした。\(reason)"
+            }
+            _ = await model.presentExtensionDialog(.notice(title: "拡張機能を追加できませんでした。", lines: [message]))
+        }
     }
 
     // MARK: WKWebExtensionControllerDelegate
@@ -127,15 +205,18 @@ import WebKit
               let space = model.space(preferring: profileID) else { throw ExtensionHostError.cannotOpen }
         let previousTabID = model.state.selectedTabID
         let previousSpaceID = model.state.selectedSpaceID
+        let previousFavoriteID = model.state.selectedFavoriteID
         let id = UUID()
         model.send(.newTabWithID(id: id, spaceID: space.id, url: url?.absoluteString ?? "about:blank"))
         guard let created = model.state.tabs.first(where: { $0.id == id }) else { throw ExtensionHostError.cannotOpen }
         _ = model.session(for: created)
-        if !configuration.shouldBeActive, let previousTabID {
+        if !configuration.shouldBeActive, previousTabID != nil || previousFavoriteID != nil {
             if previousSpaceID != space.id { model.send(.selectSpace(previousSpaceID)) }
-            model.send(.selectTab(previousTabID))
+            // A displayed favorite has no selected tab, and selecting a tab would replace it.
+            if let previousTabID { model.send(.selectTab(previousTabID)) }
+            if let previousFavoriteID { model.send(.selectFavorite(previousFavoriteID)) }
         }
-        return tabsBySession[id]
+        return tabsByID[id]
     }
 
     func webExtensionController(_ controller: WKWebExtensionController, openOptionsPageFor extensionContext: WKWebExtensionContext) async throws {
@@ -195,7 +276,7 @@ import WebKit
     }
 }
 
-private enum ExtensionHostError: LocalizedError {
+enum ExtensionHostError: LocalizedError {
     case cannotOpen
     var errorDescription: String? { "このブラウザでは開けません。" }
 }

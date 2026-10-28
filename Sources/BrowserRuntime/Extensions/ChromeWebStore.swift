@@ -11,12 +11,31 @@ public enum ChromeWebStore {
         return url.pathComponents.first(where: isExtensionID)
     }
 
-    public static func downloadURL(for id: String) -> URL? {
+    /// The extension ID when `url` is a store detail page (`/detail/<name>/<id>`), not a search, category or other store page.
+    public static func storeDetailID(of url: URL) -> String? {
+        guard let host = url.host?.lowercased(), host == "chromewebstore.google.com" || host == "chrome.google.com" else { return nil }
+        let parts = url.pathComponents
+        guard let detail = parts.firstIndex(of: "detail") else { return nil }
+        return parts.dropFirst(detail + 1).first(where: isExtensionID)
+    }
+
+    /// The extension name in a store tab's title, e.g. "Dark Reader" from "Dark Reader - Chrome ウェブストア".
+    public static func extensionName(fromPageTitle title: String?) -> String? {
+        guard var name = title?.trimmingCharacters(in: .whitespacesAndNewlines) else { return nil }
+        for suffix in [" - Chrome ウェブストア", " - Chrome Web Store"] where name.hasSuffix(suffix) {
+            name = String(name.dropLast(suffix.count)).trimmingCharacters(in: .whitespaces)
+            return name.isEmpty ? nil : name
+        }
+        return nil
+    }
+
+    /// `chromeVersion` is announced as `prodversion`; see `ChromeVersionResolver`.
+    public static func downloadURL(for id: String, chromeVersion: String = ChromeVersionResolver.fallback) -> URL? {
         guard isExtensionID(id) else { return nil }
         var components = URLComponents(string: "https://clients2.google.com/service/update2/crx")
         components?.queryItems = [
             URLQueryItem(name: "response", value: "redirect"),
-            URLQueryItem(name: "prodversion", value: "130.0.0.0"),
+            URLQueryItem(name: "prodversion", value: chromeVersion),
             URLQueryItem(name: "acceptformat", value: "crx3"),
             URLQueryItem(name: "x", value: "id=\(id)&installsource=ondemand&uc")
         ]

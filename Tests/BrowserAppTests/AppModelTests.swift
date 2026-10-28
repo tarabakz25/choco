@@ -31,6 +31,30 @@ import WebKit
         #expect(restored.state.split == model.state.split)
     }
 
+    @Test func extensionDialogsWaitForEachOtherAndReturnTheAnswer() async throws {
+        let (model, directory) = makeModel()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        #expect(model.extensionDialog == nil)
+
+        let confirm = Task { await model.presentExtensionDialog(.confirm(name: "Dark Reader", version: "4.9.134")) }
+        while model.extensionDialog == nil { await Task.yield() }
+        #expect(model.extensionDialog?.content == .confirm(name: "Dark Reader", version: "4.9.134"))
+        #expect(model.extensionDialog?.surface == .browser)
+
+        let notice = Task { await model.presentExtensionDialog(.notice(title: "追加できませんでした。", lines: ["理由"]), surface: .settings) }
+        while model.extensionDialogs.count < 2 { await Task.yield() }
+        // The second one is queued behind the first, not shown on top of it.
+        #expect(model.extensionDialog?.surface == .browser)
+
+        model.resolveExtensionDialog(false)
+        #expect(await confirm.value == false)
+        #expect(model.extensionDialog?.surface == .settings)
+        model.resolveExtensionDialog(true)
+        #expect(await notice.value == true)
+        #expect(model.extensionDialog == nil)
+        model.resolveExtensionDialog(true) // nothing pending: harmless
+    }
+
     @Test func controlTabUsesFrozenRecentOrder() async throws {
         let (model, directory) = makeModel()
         defer { try? FileManager.default.removeItem(at: directory) }
