@@ -1,4 +1,5 @@
 import Foundation
+import BrowserLocalization
 
 public struct BrowserProfile: Codable, Equatable, Identifiable, Sendable {
     public var id: UUID
@@ -92,8 +93,8 @@ public struct BrowserState: Codable, Equatable, Sendable {
     }
 
     public static func initial() -> BrowserState {
-        let profile = BrowserProfile(name: "デフォルト")
-        let space = BrowserSpace(name: "マイスペース", profileID: profile.id)
+        let profile = BrowserProfile(name: Localizer().text("Default"))
+        let space = BrowserSpace(name: Localizer().text("My Space"), profileID: profile.id)
         let tab = BrowserTab(spaceID: space.id)
         return BrowserState(profiles: [profile], spaces: [space], tabs: [tab], selectedSpaceID: space.id, selectedTabID: tab.id)
     }
@@ -103,6 +104,8 @@ public enum BrowserAction: Sendable {
     case newTab(url: String)
     case newTabWithID(id: UUID, spaceID: UUID, url: String)
     case selectTab(UUID), selectFavorite(UUID), closeTab(UUID), deleteTab(UUID)
+    /// Removes a tab that now lives in its own window; unlike `deleteTab` it is not archived until that window closes.
+    case detachTab(UUID), archiveTab(BrowserTab)
     case restoreLatestArchive, restoreArchive(UUID)
     case renameTab(UUID, String), duplicateTab(UUID), pinTab(UUID), unpinTab(UUID), resetPinnedTab(UUID), setPinnedURL(UUID, String)
     case moveTab(UUID, spaceID: UUID, folderID: UUID?)
@@ -112,7 +115,7 @@ public enum BrowserAction: Sendable {
     case createSpace(name: String, icon: String, colorHex: String, profileID: UUID)
     case updateSpace(UUID, name: String, icon: String, colorHex: String, profileID: UUID)
     case selectSpace(UUID), createProfile(name: String)
-    case createFavorite(title: String, url: String), updateFavorite(UUID, title: String, url: String), deleteFavorite(UUID)
+    case createFavorite(title: String, url: String), insertFavorite(title: String, url: String, at: Int), updateFavorite(UUID, title: String, url: String), deleteFavorite(UUID)
     case clearToday
     case setSplit(leading: UUID, trailing: UUID), swapSplit, setSplitFraction(Double), clearSplit, toggleSidebar
 }

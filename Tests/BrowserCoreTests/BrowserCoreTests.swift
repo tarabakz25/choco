@@ -35,6 +35,42 @@ import Testing
         await store.flush()
     }
 
+    @Test func detachedTabLeavesTheSidebarWithoutArchivingUntilItsWindowCloses() async throws {
+        let directory = try temporaryDirectory(); defer { try? FileManager.default.removeItem(at: directory) }
+        let store = BrowserStore(directory: directory)
+        let keptID = try #require(store.state.selectedTabID)
+        store.send(.newTab(url: "https://example.com/dragged"))
+        let draggedID = try #require(store.state.selectedTabID)
+        store.send(.pinTab(draggedID))
+        let tab = try #require(store.state.tabs.first { $0.id == draggedID })
+        store.send(.detachTab(draggedID))
+        #expect(store.state.tabs.map(\.id) == [keptID])
+        #expect(store.state.archive.isEmpty)
+        #expect(store.state.selectedTabID == keptID)
+        store.send(.archiveTab(tab))
+        #expect(store.state.archive.first?.tab.id == draggedID)
+        store.send(.restoreLatestArchive)
+        #expect(store.state.tabs.contains { $0.id == draggedID && $0.url == "https://example.com/dragged" })
+        // A tab that is still open cannot also be archived.
+        store.send(.archiveTab(tab))
+        #expect(store.state.archive.isEmpty)
+        await store.flush()
+    }
+
+    @Test func insertedFavoriteLandsInTheRequestedSlotWithinTheLimit() async throws {
+        let directory = try temporaryDirectory(); defer { try? FileManager.default.removeItem(at: directory) }
+        let store = BrowserStore(directory: directory)
+        store.send(.createFavorite(title: "A", url: "https://a.example"))
+        store.send(.createFavorite(title: "B", url: "https://b.example"))
+        store.send(.insertFavorite(title: "Mid", url: "https://mid.example", at: 1))
+        store.send(.insertFavorite(title: "Past end", url: "https://end.example", at: 99))
+        store.send(.insertFavorite(title: "Before start", url: "https://start.example", at: -3))
+        #expect(store.state.favorites.map(\.title) == ["Before start", "A", "Mid", "B", "Past end"])
+        for i in 0..<10 { store.send(.insertFavorite(title: "F\(i)", url: "https://f\(i).example", at: 0)) }
+        #expect(store.state.favorites.count == 12)
+        await store.flush()
+    }
+
     @Test func deletingPinnedTabAndFolderPreservesRestorableMetadata() async throws {
         let directory = try temporaryDirectory(); defer { try? FileManager.default.removeItem(at: directory) }
         let store = BrowserStore(directory: directory)

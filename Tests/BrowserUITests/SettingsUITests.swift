@@ -50,8 +50,8 @@ import XCTest
         openSettings()
 
         let general = selectPage("General")
-        XCTAssertEqual(general.frame.width, 684, accuracy: 4)
-        XCTAssertEqual(general.frame.height, 650, accuracy: 4)
+        XCTAssertEqual(general.frame.width, 855, accuracy: 4)
+        XCTAssertEqual(general.frame.height, 813, accuracy: 4)
         XCTAssertTrue(general.descendants(matching: .any).matching(identifier: "settings-appearance").firstMatch.exists)
         XCTAssertTrue(general.descendants(matching: .any).matching(identifier: "settings-motion").firstMatch.exists)
         capture(general, name: "settings-general")
@@ -78,7 +78,7 @@ import XCTest
         capture(shortcuts, name: "settings-shortcuts")
 
         let advanced = selectPage("Advanced")
-        XCTAssertTrue(advanced.staticTexts["Play choco sound effects"].exists)
+        XCTAssertTrue(advanced.staticTexts["Play choco-browser sound effects"].exists)
         capture(advanced, name: "settings-advanced")
         app.typeKey("w", modifierFlags: .command)
         let closed = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: advanced)

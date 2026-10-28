@@ -109,3 +109,11 @@ UIテストはテスト用状態とローカルページのみを使用する。
 - `./scripts/build-app.sh`: 成功。整理後のソースから`build/choco.app`を再作成。
 - Xcodeの`SettingsUITests`2件成功。設定の4タブ・検索・プロファイル作成と再起動後の保持・⌘Wで設定だけを閉じる動作を確認し、4画面のネイティブキャプチャを確認。
 - SwiftPMのターゲット、Xcodeの同期ルート、Resourceの位置、保存キー、Core/Runtimeの実装は維持。
+
+## i18n（日英切替）
+
+- `./scripts/test.sh`：翻訳テーブルのキー・書式整合性、言語の選択、空タブの表示翻訳、カスタム名称・Webページタイトル・Archiveの保存内容保持、および既存の単体テストが成功。任意のWebKit専用テストは未有効化。
+- `./scripts/test-ui.sh -only-testing:BrowserUITests/LocalizationUITests`：1件成功。日本語→English→終了・再起動→English維持→日本語を確認。
+- 同UIテストで、言語切替中のタブID・未確定のアドレス入力・Webページ内の入力内容が保持されること、両言語のコマンド検索とサイドバーメニュー表示を確認。
+- `./scripts/build-app.sh`とXcode UIテスト用ビルドの両方で、共通翻訳バンドルと日英の`InfoPlist.strings`同梱を確認。生成したアプリの署名検証、plist検査、差分チェックに成功。
+- macOS標準メニュー・許可ダイアログ・OS由来エラー詳細はシステム言語に従う。既に生成済みのWebKit・保存エラーは発生時の言語を保持する。

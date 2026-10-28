@@ -21,6 +21,8 @@ struct WebSessionPoolTests {
         #expect(replacement !== first)
         #expect(replacement.profileID == otherProfile)
         #expect(replacement.webView.configuration.websiteDataStore.identifier == otherProfile)
+        let sibling = pool.session(id: UUID(), profileID: otherProfile)
+        #expect(sibling.webView.configuration.websiteDataStore === replacement.webView.configuration.websiteDataStore)
         #expect(first.webView.navigationDelegate == nil)
         #expect(first.webView.uiDelegate == nil)
         pool.retainOnly([])
@@ -41,6 +43,20 @@ struct WebSessionPoolTests {
         #expect(!session.isLoading)
         pool.retainOnly([])
         #expect(session.webView.navigationDelegate == nil)
+    }
+
+    @Test func releasedSessionStaysAliveOutsideThePool() {
+        _ = NSApplication.shared
+        let pool = WebSessionPool()
+        let id = UUID(), profileID = UUID()
+        let session = pool.session(id: id, profileID: profileID)
+        #expect(pool.release(id: id) === session)
+        pool.retainOnly([])
+        #expect(session.webView.navigationDelegate != nil)
+        #expect(pool.release(id: id) == nil)
+        #expect(pool.session(id: id, profileID: profileID) !== session)
+        pool.retainOnly([])
+        session.dispose()
     }
 
     @Test func popupRejectsForeignOrPrivateDataStoreWithoutReplacingExistingSession() {

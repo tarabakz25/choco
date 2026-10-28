@@ -1,4 +1,5 @@
 import AppKit
+import BrowserLocalization
 import Foundation
 import Observation
 import WebKit
@@ -9,7 +10,8 @@ public final class WebSession: NSObject {
     public let profileID: UUID
     public let webView: WKWebView
     public private(set) var url: URL?
-    public private(set) var title = "新しいタブ"
+    // Page titles remain content; the app supplies its localized empty-tab label.
+    public private(set) var title = ""
     public private(set) var isLoading = false
     public private(set) var estimatedProgress = 0.0
     public private(set) var canGoBack = false
@@ -28,41 +30,61 @@ public final class WebSession: NSObject {
     @ObservationIgnored private var isDisposed = false
     @ObservationIgnored private var lastReportedURL: URL?
     @ObservationIgnored private var lastReportedTitle = ""
+    @ObservationIgnored private var pendingScroll: PageScrollOffset?
 
-    public init(id: UUID, profileID: UUID, initialURL: URL? = nil, configuration: WKWebViewConfiguration? = nil,
+    public init(id: UUID, profileID: UUID, initialURL: URL? = nil, restoreScroll: PageScrollOffset? = nil, configuration: WKWebViewConfiguration? = nil,
                 extensionController: WKWebExtensionController? = nil) {
         self.id = id
         self.profileID = profileID
         let hasInvalidProfileIdentifier = profileID.uuidString == "00000000-0000-0000-0000-000000000000"
         let configuration = configuration ?? {
             let configuration = WKWebViewConfiguration()
+            configuration.applyBrowserIdentity()
             // WebKit raises an Objective-C exception for the zero UUID. A
             // corrupt profile must never crash the app or use another profile.
             configuration.websiteDataStore = hasInvalidProfileIdentifier ? .nonPersistent() : WKWebsiteDataStore(forIdentifier: profileID)
             configuration.webExtensionController = extensionController
             return configuration
         }()
+        if let extensionController { configuration.webExtensionController = extensionController }
         self.webView = WKWebView(frame: .zero, configuration: configuration)
         super.init()
         webView.navigationDelegate = self
         webView.uiDelegate = self
         webView.allowsBackForwardNavigationGestures = true
         if hasInvalidProfileIdentifier {
-            errorMessage = "プロファイル識別子が無効です。このタブのログイン情報は保存されません。新しいプロファイルを作成してください。"
+            errorMessage = Localizer().text("The profile identifier is invalid. Login information for this tab will not be saved. Create a new profile.")
         }
         #if DEBUG
         webView.isInspectable = true
         #endif
         observeWebView()
-        if let initialURL { navigate(to: initialURL) }
+        if let initialURL { navigate(to: initialURL, restoreScroll: restoreScroll) }
     }
 
     public func navigate(to url: URL) {
+        navigate(to: url, restoreScroll: nil)
+    }
+
+    /// Reads scroll, media playback, and unsaved form edits. Nil means the page could not be asked.
+    public func capturePageMemory() async -> PageMemoryProbe? {
+        guard !isDisposed else { return nil }
+        do {
+            let value = try await webView.evaluateJavaScript(PageMemoryScript.source)
+            return PageMemoryScript.decode(value: value)
+        } catch {
+            return nil
+        }
+    }
+
+    public func navigate(to url: URL, restoreScroll: PageScrollOffset?) {
         guard !isDisposed else { return }
         guard Self.isWebNavigation(url) else {
-            errorMessage = "この種類のURLは開けません。HTTPまたはHTTPSのURLを入力してください。"
+            pendingScroll = nil
+            errorMessage = Localizer().text("This type of URL cannot be opened. Enter an HTTP or HTTPS URL.")
             return
         }
+        pendingScroll = restoreScroll
         errorMessage = nil
         webView.load(URLRequest(url: url))
     }
@@ -99,6 +121,7 @@ public final class WebSession: NSObject {
         downloads.removeAll()
         activeDownloadCount = 0
         downloadProgress = nil
+        pendingScroll = nil
         onPageChange = nil
         onOpenWindow = nil
         onClose = nil
@@ -123,7 +146,7 @@ public final class WebSession: NSObject {
     private func updateState() {
         guard !isDisposed else { return }
         url = webView.url
-        title = webView.title.flatMap { $0.isEmpty ? nil : $0 } ?? webView.url?.host ?? "新しいタブ"
+        title = webView.title.flatMap { $0.isEmpty ? nil : $0 } ?? webView.url?.host ?? ""
         isLoading = webView.isLoading
         estimatedProgress = webView.estimatedProgress
         canGoBack = webView.canGoBack
@@ -151,7 +174,7 @@ public final class WebSession: NSObject {
 
     private func siteAlert(message: String, frame: WKFrameInfo) -> NSAlert {
         let alert = NSAlert()
-        alert.messageText = frame.securityOrigin.host.isEmpty ? "Webページからのメッセージ" : frame.securityOrigin.host
+        alert.messageText = frame.securityOrigin.host.isEmpty ? Localizer().text("Message from a Web Page") : frame.securityOrigin.host
         alert.informativeText = message
         return alert
     }
@@ -202,7 +225,7 @@ extension WebSession: WKNavigationDelegate {
             NSWorkspace.shared.open(url)
         } else {
             decisionHandler(.cancel)
-            errorMessage = "この種類のリンクは、このブラウザでは開けません。"
+            errorMessage = Localizer().text("This type of link cannot be opened in this browser.")
         }
     }
 
@@ -213,18 +236,38 @@ extension WebSession: WKNavigationDelegate {
     public func webView(_ webView: WKWebView, navigationAction: WKNavigationAction, didBecome download: WKDownload) { beginTracking(download) }
     public func webView(_ webView: WKWebView, navigationResponse: WKNavigationResponse, didBecome download: WKDownload) { beginTracking(download) }
     public func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) { errorMessage = nil; updateState() }
-    public func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { updateState() }
+    public func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        updateState()
+        applyPendingScroll()
+    }
     public func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { reportNavigationError(error) }
     public func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { reportNavigationError(error) }
     public func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
-        errorMessage = "ページの表示処理が停止しました。再読み込みしてください。"
+        errorMessage = Localizer().text("The page stopped responding. Reload to continue.")
         updateState()
+    }
+
+    private func applyPendingScroll() {
+        guard let pendingScroll, !isDisposed, !webView.isLoading else { return }
+        let x = Self.jsNumber(pendingScroll.x)
+        let y = Self.jsNumber(pendingScroll.y)
+        self.pendingScroll = nil
+        let script = "window.scrollTo(\(x), \(y));"
+        Task { @MainActor [weak self] in
+            guard let self, !self.isDisposed else { return }
+            _ = try? await self.webView.evaluateJavaScript(script)
+        }
+    }
+
+    private static func jsNumber(_ value: Double) -> String {
+        let number = value.isFinite ? max(0, value) : 0
+        return String(format: "%.4f", locale: Locale(identifier: "en_US_POSIX"), number)
     }
 
     private func reportNavigationError(_ error: Error) {
         let error = error as NSError
         if error.domain == NSURLErrorDomain && error.code == NSURLErrorCancelled { return }
-        errorMessage = "ページを開けませんでした: \(error.localizedDescription)"
+        errorMessage = Localizer().format("Could not open the page: %@", error.localizedDescription)
         updateState()
     }
 }
@@ -239,21 +282,21 @@ extension WebSession: WKUIDelegate {
 
     public func webView(_ webView: WKWebView, runJavaScriptAlertPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping @MainActor @Sendable () -> Void) {
         let alert = siteAlert(message: message, frame: frame)
-        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: Localizer().text("OK"))
         present(alert) { _ in completionHandler() }
     }
 
     public func webView(_ webView: WKWebView, runJavaScriptConfirmPanelWithMessage message: String, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping @MainActor @Sendable (Bool) -> Void) {
         let alert = siteAlert(message: message, frame: frame)
-        alert.addButton(withTitle: "OK")
-        alert.addButton(withTitle: "キャンセル")
+        alert.addButton(withTitle: Localizer().text("OK"))
+        alert.addButton(withTitle: Localizer().text("Cancel"))
         present(alert) { completionHandler($0 == .alertFirstButtonReturn) }
     }
 
     public func webView(_ webView: WKWebView, runJavaScriptTextInputPanelWithPrompt prompt: String, defaultText: String?, initiatedByFrame frame: WKFrameInfo, completionHandler: @escaping @MainActor @Sendable (String?) -> Void) {
         let alert = siteAlert(message: prompt, frame: frame)
-        alert.addButton(withTitle: "OK")
-        alert.addButton(withTitle: "キャンセル")
+        alert.addButton(withTitle: Localizer().text("OK"))
+        alert.addButton(withTitle: Localizer().text("Cancel"))
         let field = NSTextField(string: defaultText ?? "")
         field.frame = NSRect(x: 0, y: 0, width: 320, height: 24)
         alert.accessoryView = field
@@ -283,7 +326,7 @@ extension WebSession: WKDownloadDelegate {
         let filename = (suggestedFilename as NSString).lastPathComponent
         panel.nameFieldStringValue = filename.isEmpty || filename == "." || filename == ".." ? "download" : filename
         panel.canCreateDirectories = true
-        panel.title = "ダウンロードを保存"
+        panel.title = Localizer().text("Save Download")
         let completion: @MainActor @Sendable (NSApplication.ModalResponse) -> Void = { [weak self] result in
             guard let self, !self.isDisposed, result == .OK, let destination = panel.url else {
                 completionHandler(nil)
@@ -300,7 +343,7 @@ extension WebSession: WKDownloadDelegate {
                 transfer.hasSecurityScope = destination.startAccessingSecurityScopedResource()
                 completionHandler(staging)
             } catch {
-                self.errorMessage = "ダウンロードの保存先を準備できませんでした: \(error.localizedDescription)"
+                self.errorMessage = Localizer().format("Could not prepare the download destination: %@", error.localizedDescription)
                 completionHandler(nil)
                 self.finishTracking(download)
             }
@@ -319,13 +362,13 @@ extension WebSession: WKDownloadDelegate {
                 try FileManager.default.copyItem(at: staging, to: destination)
             }
         } catch {
-            errorMessage = "ダウンロードを保存できませんでした: \(error.localizedDescription)"
+            errorMessage = Localizer().format("Could not save the download: %@", error.localizedDescription)
         }
     }
 
     public func download(_ download: WKDownload, didFailWithError error: Error, resumeData: Data?) {
         if (error as NSError).code != NSURLErrorCancelled {
-            errorMessage = "ダウンロードに失敗しました: \(error.localizedDescription)"
+            errorMessage = Localizer().format("Download failed: %@", error.localizedDescription)
         }
         finishTracking(download)
     }

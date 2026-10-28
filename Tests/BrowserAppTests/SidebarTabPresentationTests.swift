@@ -15,7 +15,11 @@ import Testing
         #expect(presenter.rows.map(\.id) == [first.id, second.id, third.id])
         let outgoing = try #require(presenter.rows.first { $0.id == second.id })
         #expect(outgoing.isRetiring && outgoing.progress == 0)
-        try await Task.sleep(for: .milliseconds(250))
+        // The retirement delay is 180ms; a loaded CI runner can overshoot a fixed sleep, so poll.
+        let deadline = ContinuousClock.now + .seconds(3)
+        while presenter.rows.count != 2, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(20))
+        }
         #expect(presenter.rows.map(\.id) == [first.id, third.id])
     }
 

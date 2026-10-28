@@ -1,4 +1,5 @@
 import Foundation
+import BrowserLocalization
 
 struct LoadedState {
     var state: BrowserState
@@ -26,9 +27,9 @@ enum StatePersistence {
             if !repairs.isEmpty {
                 do {
                     let backup = try preserve(file: file, move: false)
-                    return LoadedState(state: state, diagnostic: "保存データを修復しました。元のデータ: \(backup.lastPathComponent)", canSave: true)
+                    return LoadedState(state: state, diagnostic: Localizer().format("Saved data was repaired. Original data: %@", backup.lastPathComponent), canSave: true)
                 } catch {
-                    return LoadedState(state: state, diagnostic: "保存データの参照を修復しましたが、元のファイルを退避できないため保存を停止しています。\(error.localizedDescription)", canSave: false)
+                    return LoadedState(state: state, diagnostic: Localizer().format("Saved data references were repaired, but saving is paused because the original file could not be backed up. %@", error.localizedDescription), canSave: false)
                 }
             }
             return LoadedState(state: state, diagnostic: nil, canSave: true)
@@ -36,9 +37,9 @@ enum StatePersistence {
             let cause = error.localizedDescription
             do {
                 let backup = try preserve(file: file, move: true)
-                return LoadedState(state: .initial(), diagnostic: "保存データを読み込めなかったため新しい状態で開始しました。\(cause) 元のデータ: \(backup.lastPathComponent)", canSave: true)
+                return LoadedState(state: .initial(), diagnostic: Localizer().format("Started with a new state because saved data could not be loaded. %@ Original data: %@", cause, backup.lastPathComponent), canSave: true)
             } catch {
-                return LoadedState(state: .initial(), diagnostic: "保存データを読み込めませんでした。元のファイルを保護するため保存を停止しています。\(cause) 退避エラー: \(error.localizedDescription)", canSave: false)
+                return LoadedState(state: .initial(), diagnostic: Localizer().format("Saved data could not be loaded. Saving is paused to protect the original file. %@ Backup error: %@", cause, error.localizedDescription), canSave: false)
             }
         }
     }
@@ -54,8 +55,8 @@ enum StatePersistence {
         case missingSchema, unsupportedSchema(Int)
         var errorDescription: String? {
             switch self {
-            case .missingSchema: "保存形式のバージョンがありません。"
-            case .unsupportedSchema(let version): "保存形式バージョン\(version)には対応していません。"
+            case .missingSchema: Localizer().text("The saved data has no format version.")
+            case .unsupportedSchema(let version): Localizer().format("Saved data format version %lld is not supported.", version)
             }
         }
     }
@@ -85,6 +86,6 @@ actor StateWriter {
 
     enum WriteError: LocalizedError {
         case recoveryRequired
-        var errorDescription: String? { "元の保存データを保護するため保存を停止しています。" }
+        var errorDescription: String? { Localizer().text("Saving is paused to protect the original saved data.") }
     }
 }

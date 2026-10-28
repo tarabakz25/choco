@@ -1,0 +1,36 @@
+---
+import type { Locale } from '../i18n';
+import { dictionaries } from '../i18n';
+import RemotionPlayer, { type SceneName } from './RemotionPlayer';
+
+interface Props { locale: Locale }
+const { locale } = Astro.props;
+const t = dictionaries[locale];
+---
+<section id="features" class="relative border-t border-white/[0.06] py-24 md:py-32">
+  <div class="mx-auto w-[min(1120px,100%-2rem)]">
+    <div class="reveal max-w-2xl">
+      <h2 class="text-3xl font-bold tracking-tight md:text-5xl">{t.features.title}</h2>
+      <p class="mt-4 text-lg leading-relaxed text-fg-2">{t.features.sub}</p>
+    </div>
+
+    <div class="mt-14 grid gap-5 md:grid-cols-2">
+      {t.features.items.map((item, i) => (
+        <article
+          class="reveal group flex flex-col rounded-3xl border border-white/10 bg-white/[0.03] p-3 transition duration-300 hover:-translate-y-1 hover:border-choco/50 hover:bg-white/[0.05]"
+          style={`--reveal-delay:${(i % 2) * 90}ms`}
+        >
+          <div class="relative aspect-[720/450] overflow-hidden rounded-2xl bg-gradient-to-br from-[#3a394c] via-[#413a4c] to-[#49394c]">
+            <RemotionPlayer client:visible scene={item.key as SceneName} locale={locale} label={item.title} />
+          </div>
+          <div class="px-3 pb-3 pt-5">
+            <h3 class="text-lg font-semibold tracking-tight">{item.title}</h3>
+            <p class="mt-1.5 text-[15px] leading-relaxed text-fg-2">{item.body}</p>
+          </div>
+        </article>
+      ))}
+    </div>
+
+    <p class="reveal mt-8 rounded-2xl border border-white/10 bg-white/[0.02] px-5 py-4 text-sm leading-relaxed text-fg-3">{t.features.note}</p>
+  </div>
+</section>

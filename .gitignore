@@ -7,3 +7,7 @@ xcuserdata/
 .swiftpm/
 __pycache__/
 *.py[cod]
+.playwright-mcp/
+site/node_modules/
+site/dist/
+site/.astro/

@@ -16,6 +16,7 @@ enum DesignResources {
 /// Figma SVGs are retained unmodified and converted losslessly to PDF for AppKit.
 struct DesignIcon: View {
     let name: String
+    /// Size in Figma points; `ChocoSpace.scale` is applied on display.
     let size: CGFloat
 
     init(_ name: String, size: CGFloat = 16) {
@@ -23,13 +24,15 @@ struct DesignIcon: View {
         self.size = size
     }
 
+    private var side: CGFloat { ChocoSpace.u(size) }
+
     var body: some View {
         if let image = Self.image(named: name) {
             Image(nsImage: image).resizable().renderingMode(.original)
-                .aspectRatio(contentMode: .fit).frame(width: size, height: size)
+                .aspectRatio(contentMode: .fit).frame(width: side, height: side)
                 .accessibilityHidden(true)
         } else {
-            Color.clear.frame(width: size, height: size).accessibilityHidden(true)
+            Color.clear.frame(width: side, height: side).accessibilityHidden(true)
         }
     }
 
@@ -66,5 +69,23 @@ struct SiteIcon: View {
         if matches("adobe.com") { return "b1e76" }
         if matches("google.com") || matches("google.co.jp") { return "0cf92" }
         return "d354a"
+    }
+
+    /// Figma `favicon/*` variables: the colour a Favorite Tile borrows from its icon when selected or hovered.
+    /// Sites without a variable in Figma (Drive, Colab, Notion, Adobe) use their brand colour; unknown sites use `favicon/neutral`.
+    static func accent(for address: String) -> Color {
+        switch asset(for: address) {
+        case "63d41": Color(hex: "ff7a00") // amazon
+        case "1f8e5": Color(hex: "ff0033") // youtube
+        case "0cf92": Color(hex: "4285f4") // google
+        case "dad7f": Color(hex: "e6e6e6") // github
+        case "52e0a": Color(hex: "c8c8c8") // x
+        case "02093": Color(hex: "e60023") // pinterest
+        case "a0df4": Color(hex: "1fa463") // drive
+        case "6ffaf": Color(hex: "f9ab00") // colab
+        case "aa799": Color(hex: "e6e6e6") // notion
+        case "b1e76": Color(hex: "fa0f00") // adobe
+        default: .white
+        }
     }
 }

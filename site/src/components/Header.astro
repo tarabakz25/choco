@@ -1,0 +1,36 @@
+---
+import type { Locale } from '../i18n';
+import { dictionaries } from '../i18n';
+import { REPO_URL } from '../config';
+import { url } from '../utils';
+import DownloadButton from './DownloadButton.astro';
+
+interface Props { locale: Locale }
+const { locale } = Astro.props;
+const t = dictionaries[locale];
+const home = locale === 'ja' ? url('') : url('en/');
+const other = locale === 'ja' ? url('en/') : url('');
+const links = [
+  { href: '#features', label: t.nav.features },
+  { href: '#install', label: t.nav.install },
+  { href: '#privacy', label: t.nav.privacy },
+  { href: REPO_URL, label: t.nav.github },
+];
+---
+<header class="fixed inset-x-0 top-0 z-40 border-b border-white/[0.06] bg-ink/70 backdrop-blur-xl">
+  <div class="mx-auto flex h-16 w-[min(1120px,100%-2rem)] items-center gap-6">
+    <a href={home} class="flex items-center gap-2.5 font-semibold tracking-tight text-fg">
+      <img src={url('icon.png')} alt="" width="28" height="28" class="size-7" />
+      choco-browser
+    </a>
+    <nav aria-label={t.nav.mainLabel} class="ml-auto hidden items-center gap-6 text-sm text-fg-2 md:flex">
+      {links.map((l) => <a href={l.href} class="transition-colors hover:text-fg">{l.label}</a>)}
+    </nav>
+    <a
+      href={other}
+      hreflang={locale === 'ja' ? 'en' : 'ja'}
+      class="ml-auto rounded-full border border-white/10 px-3 py-1 text-sm text-fg-2 transition-colors hover:border-white/25 hover:text-fg md:ml-0"
+    >{t.otherLang.label}</a>
+    <div class="hidden sm:block"><DownloadButton t={t.download} size="sm" /></div>
+  </div>
+</header>

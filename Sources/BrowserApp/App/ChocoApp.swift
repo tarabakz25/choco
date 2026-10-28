@@ -8,15 +8,15 @@ import SwiftUI
     @AppStorage("appearance") private var appearance = "system"
 
     init() {
-        ChocoTheme.registerFonts()
         if let preference = MotionPreference.requested(in: ProcessInfo.processInfo.arguments) {
             UserDefaults.standard.set(preference.rawValue, forKey: MotionPreference.storageKey)
         }
     }
 
     var body: some Scene {
-        Window("choco", id: "browser") {
+        Window("choco-browser", id: "browser") {
             BrowserWindow(model: model)
+                .unsupportedNoticeOverlay()
                 .modifier(AppMotionPreference())
                 .preferredColorScheme(appearance == "dark" ? .dark : appearance == "light" ? .light : nil)
                 .onAppear { delegate.model = model; delegate.installKeyboardRouting(); NSApplication.shared.setActivationPolicy(.regular); NSApplication.shared.activate(ignoringOtherApps: true) }
@@ -32,10 +32,12 @@ import SwiftUI
                 Button("サイドバーを切り替える") { model.send(.toggleSidebar) }.keyboardShortcut("s")
             }
             CommandGroup(after: .toolbar) {
-                Button("再読み込み") { model.activeSession?.reload() }.keyboardShortcut("r")
-                Button("前のページ") { model.activeSession?.goBack() }.keyboardShortcut("[", modifiers: .command)
-                Button("次のページ") { model.activeSession?.goForward() }.keyboardShortcut("]", modifiers: .command)
-                Button("ページ内を検索") { model.showsFind.toggle() }.keyboardShortcut("f")
+                Button("再読み込み") { model.keySession?.reload() }.keyboardShortcut("r")
+                Button("前のページ") { model.keySession?.goBack() }.keyboardShortcut("[", modifiers: .command)
+                Button("次のページ") { model.keySession?.goForward() }.keyboardShortcut("]", modifiers: .command)
+                Button("ページ内を検索") { model.showMainWindow(); model.showsFind.toggle() }.keyboardShortcut("f")
+                Button("新しいSplit") { model.showMainWindow(); model.newSplit() }.keyboardShortcut(";", modifiers: [.control, .shift])
+                Button("新しいEasel") { UnsupportedNotice.shared.show("Easel") }.keyboardShortcut("e", modifiers: [.control, .shift])
                 Button("閉じたタブを復元") { model.send(.restoreLatestArchive) }.keyboardShortcut("t", modifiers: [.command, .shift])
                 Button("アーカイブ") { model.showsArchive = true }
             }
@@ -49,7 +51,7 @@ import SwiftUI
                 }.keyboardShortcut("w")
             }
         }
-        Settings { BrowserSettings(model: model) }
+        Settings { BrowserSettings(model: model).unsupportedNoticeOverlay() }
             .windowStyle(.hiddenTitleBar)
             .windowResizability(.contentSize)
     }

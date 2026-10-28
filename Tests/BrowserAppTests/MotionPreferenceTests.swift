@@ -15,10 +15,10 @@ struct MotionPreferenceTests {
     }
 
     @Test func launchPreferenceRequiresAnExplicitValidValue() {
-        #expect(MotionPreference.requested(in: ["Choco"]) == nil)
-        #expect(MotionPreference.requested(in: ["Choco", "--motion"]) == nil)
-        #expect(MotionPreference.requested(in: ["Choco", "--motion", "invalid"]) == nil)
-        #expect(MotionPreference.requested(in: ["Choco", "--motion", "full"]) == .full)
-        #expect(MotionPreference.requested(in: ["Choco", "--motion", "system"]) == .system)
+        #expect(MotionPreference.requested(in: ["choco-browser"]) == nil)
+        #expect(MotionPreference.requested(in: ["choco-browser", "--motion"]) == nil)
+        #expect(MotionPreference.requested(in: ["choco-browser", "--motion", "invalid"]) == nil)
+        #expect(MotionPreference.requested(in: ["choco-browser", "--motion", "full"]) == .full)
+        #expect(MotionPreference.requested(in: ["choco-browser", "--motion", "system"]) == .system)
     }
 }

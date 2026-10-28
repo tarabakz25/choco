@@ -7,9 +7,8 @@ import WebKit
 struct SiteControlsView: View {
     @Bindable var model: AppModel
     @ChocoReducedMotion private var reduceMotion: Bool
-    @FocusState private var copyFocused: Bool
+    @State private var developerModeRefresh = false
     @State private var hasAppeared = false
-    @State private var copied = false
 
     private var currentTab: BrowserTab? {
         guard let id = model.navigationTabID else { return nil }
@@ -35,50 +34,25 @@ struct SiteControlsView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: ChocoSpace.u(6)) {
             quickActions
-            sectionHeader("このページ")
-            HStack(spacing: ChocoSpace.sm) {
-                ZStack {
-                    Circle().fill(.white.opacity(0.2)).frame(width: 28, height: 28)
-                    SiteIcon(url: pageURL?.absoluteString ?? "", size: 16)
-                }
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(pageURL == nil ? "ページが選択されていません" : pageTitle)
-                        .font(ChocoTheme.font(13, weight: .semibold)).lineLimit(1)
-                    Text(pageURL?.host ?? "URLを開くと操作できます")
-                        .font(ChocoTheme.font(11)).foregroundStyle(ChocoTheme.secondary).lineLimit(1)
-                }
-                Spacer(minLength: 0)
-            }.frame(height: 40)
-            sectionHeader("ページ操作")
-            Button { togglePinned() } label: {
-                settingsRow(title: currentTab?.isPinned == true ? "固定を解除" : "タブを固定",
-                            subtitle: "現在のSpaceに保存") {
-                    Image(systemName: currentTab?.isPinned == true ? "pin.slash" : "pin").font(.system(size: 14))
-                }
-            }.buttonStyle(SiteSettingsButtonStyle()).disabled(pageURL == nil)
-                .accessibilityIdentifier("site-pin")
-            Button { toggleFavorite() } label: {
-                settingsRow(title: matchingFavorite == nil ? "お気に入りに追加" : "お気に入りを解除",
-                            subtitle: matchingFavorite == nil && model.state.favorites.count >= 12 ? "登録できる上限は12件です" : "全Space共通のリンク") {
-                    if matchingFavorite == nil { DesignIcon("77a3c", size: 15) }
-                    else { Image(systemName: "star.fill").font(.system(size: 13)) }
-                }
-            }.buttonStyle(SiteSettingsButtonStyle()).disabled(!canToggleFavorite)
-                .accessibilityIdentifier("site-favorite")
-            Button {
-                model.showsSiteControls = false
-                model.showsFind = true
-            } label: {
-                settingsRow(title: "ページ内を検索", subtitle: "⌘F") { DesignIcon("9d9ff", size: 15) }
-            }.buttonStyle(SiteSettingsButtonStyle()).disabled(pageURL == nil)
-                .accessibilityIdentifier("site-find")
-            splitAction
-            extensionActions
+            sectionHeader("拡張機能")
+            extensionTiles
+            sectionHeader("Boost")
+            Button { UnsupportedNotice.shared.show("Boost") } label: {
+                settingsRow(title: "新しいBoost", subtitle: "このサイトをカスタマイズ") { DesignIcon("aa001", size: 15) }
+            }.buttonStyle(SiteSettingsButtonStyle()).accessibilityIdentifier("site-boost")
+            sectionHeader("設定")
+            Button { toggleDeveloperMode() } label: {
+                settingsRow(title: "デベロッパーモード", subtitle: developerMode ? "オン" : "オフ") { DesignIcon("a6475", size: 15) }
+            }.buttonStyle(SiteSettingsButtonStyle()).disabled(model.activeSession == nil)
+                .accessibilityIdentifier("site-developer-mode")
+            Button { UnsupportedNotice.shared.show("ピクチャインピクチャの自動表示") } label: {
+                settingsRow(title: "自動ピクチャインピクチャ", subtitle: "許可") { DesignIcon("0c4d7", size: 15) }
+            }.buttonStyle(SiteSettingsButtonStyle()).accessibilityIdentifier("site-auto-pip")
             footer
         }
-        .padding(8).frame(width: 220)
+        .padding(ChocoSpace.u(8)).frame(width: ChocoSpace.u(220))
         .foregroundStyle(ChocoTheme.text)
         .background {
             RoundedRectangle(cornerRadius: 12).fill(.ultraThinMaterial)
@@ -95,184 +69,171 @@ struct SiteControlsView: View {
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("site-controls")
         .onExitCommand { model.showsSiteControls = false }
-        .task {
-            hasAppeared = true
-            await Task.yield()
-            do { try await Task.sleep(for: .milliseconds(30)) } catch { return }
-            guard model.showsSiteControls, !Task.isCancelled, pageURL != nil else { return }
-            copyFocused = true
-        }
+        .task { hasAppeared = true }
     }
 
+    private var developerMode: Bool { _ = developerModeRefresh; return model.activeSession?.webView.isInspectable ?? false }
+
+    private func toggleDeveloperMode() {
+        guard let webView = model.activeSession?.webView else { return }
+        webView.isInspectable.toggle()
+        developerModeRefresh.toggle()
+    }
+
+    /// Figma "quick actions": share, Boost, page capture, area capture — four equal 26pt tiles.
     private var quickActions: some View {
-        HStack(spacing: ChocoSpace.sm) {
+        HStack(spacing: ChocoSpace.u(8)) {
             if let pageURL {
-                ShareLink(item: pageURL) {
-                    quickTile { DesignIcon("d2996", size: 15) }
-                }
-                .buttonStyle(ChocoPressStyle(radius: 7, tint: .white.opacity(0.2), hoverTint: .white.opacity(0.1))).accessibilityLabel("ページを共有")
-                .accessibilityIdentifier("site-share").help("ページを共有")
+                ShareLink(item: pageURL) { quickTile { DesignIcon("d2996", size: 15) } }
+                    .buttonStyle(ChocoPressStyle(radius: 7, tint: .white.opacity(0.2), hoverTint: .white.opacity(0.1))).accessibilityLabel("ページを共有")
+                    .accessibilityIdentifier("site-share").help("ページを共有")
             } else {
                 Button {} label: { quickTile { DesignIcon("d2996", size: 15) } }
                     .buttonStyle(ChocoPressStyle(radius: 7, tint: .white.opacity(0.2), hoverTint: .white.opacity(0.1))).disabled(true).accessibilityLabel("ページを共有")
             }
-            Button { copyURL() } label: {
-                quickTile {
-                    if copied { Image(systemName: "checkmark").font(.system(size: 13)) }
-                    else { DesignIcon("d4cd0", size: 15) }
-                }
-                .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(copyFocused ? .white.opacity(0.75) : .clear, lineWidth: 1))
-            }
-            .buttonStyle(ChocoPressStyle(radius: 7, tint: .white.opacity(0.2), hoverTint: .white.opacity(0.1))).focusable().focused($copyFocused).disabled(pageURL == nil)
-            .accessibilityLabel(copied ? "URLをコピーしました" : "URLをコピー")
-            .accessibilityIdentifier("site-copy-url").help("URLをコピー")
-            Button { togglePinned() } label: {
-                quickTile {
-                    Image(systemName: currentTab?.isPinned == true ? "pin.fill" : "pin").font(.system(size: 13))
-                }
-            }.buttonStyle(ChocoPressStyle(radius: 7, tint: .white.opacity(0.2), hoverTint: .white.opacity(0.1))).disabled(pageURL == nil)
-                .accessibilityLabel(currentTab?.isPinned == true ? "固定を解除" : "タブを固定")
-                .accessibilityIdentifier("site-quick-pin").help(currentTab?.isPinned == true ? "固定を解除" : "タブを固定")
-            Button { toggleFavorite() } label: {
-                quickTile {
-                    if matchingFavorite == nil { DesignIcon("77a3c", size: 15) }
-                    else { Image(systemName: "star.fill").font(.system(size: 13)) }
-                }
-            }.buttonStyle(ChocoPressStyle(radius: 7, tint: .white.opacity(0.2), hoverTint: .white.opacity(0.1))).disabled(!canToggleFavorite)
-                .accessibilityLabel(matchingFavorite == nil ? "お気に入りに追加" : "お気に入りを解除")
-                .accessibilityIdentifier("site-quick-favorite").help("お気に入り")
+            Button { UnsupportedNotice.shared.show("Boost") } label: { quickTile { DesignIcon("aa001", size: 15) } }
+                .buttonStyle(ChocoPressStyle(radius: 7, tint: .white.opacity(0.2), hoverTint: .white.opacity(0.1)))
+                .accessibilityLabel("Boost").accessibilityIdentifier("site-quick-boost").help("Boost")
+            Button { savePageScreenshot() } label: { quickTile { DesignIcon("89a0b", size: 15) } }
+                .buttonStyle(ChocoPressStyle(radius: 7, tint: .white.opacity(0.2), hoverTint: .white.opacity(0.1))).disabled(model.activeSession == nil)
+                .accessibilityLabel("ページのスクリーンショット").accessibilityIdentifier("site-screenshot").help("ページのスクリーンショット")
+            Button { UnsupportedNotice.shared.show("範囲のキャプチャ") } label: { quickTile { DesignIcon("5d0e2", size: 15) } }
+                .buttonStyle(ChocoPressStyle(radius: 7, tint: .white.opacity(0.2), hoverTint: .white.opacity(0.1)))
+                .accessibilityLabel("範囲をキャプチャ").accessibilityIdentifier("site-capture").help("範囲をキャプチャ")
         }.frame(maxWidth: .infinity)
     }
 
-    @ViewBuilder private var splitAction: some View {
-        if model.state.split != nil {
-            Button {
-                model.showsSiteControls = false
-                model.send(.swapSplit)
-            } label: {
-                settingsRow(title: "分割を入れ替える", subtitle: "左右のページを交換") {
-                    Image(systemName: "arrow.left.arrow.right").font(.system(size: 14))
-                }
-            }.buttonStyle(SiteSettingsButtonStyle()).accessibilityIdentifier("split-swap")
-            Button {
-                model.showsSiteControls = false
-                model.send(.clearSplit)
-            } label: {
-                settingsRow(title: "分割表示を解除", subtitle: "現在のタブを表示") {
-                    Image(systemName: "rectangle").font(.system(size: 14))
-                }
-            }.buttonStyle(SiteSettingsButtonStyle()).accessibilityIdentifier("split-clear")
-        } else {
-            Menu {
-                ForEach(splitCandidates) { tab in
-                    Button(tab.displayTitle) {
-                        model.showsSiteControls = false
-                        model.split(with: tab)
-                    }
-                }
-            } label: {
-                settingsRow(title: "分割表示", subtitle: splitCandidates.isEmpty ? "別のタブを開くと利用できます" : "別のタブと並べる") {
-                    Image(systemName: "rectangle.split.2x1").font(.system(size: 14))
-                }
+    private func savePageScreenshot() {
+        guard let webView = model.activeSession?.webView else { return }
+        let name = (pageURL?.host ?? "page") + ".png"
+        model.showsSiteControls = false
+        webView.takeSnapshot(with: nil) { image, _ in
+            guard let image, let tiff = image.tiffRepresentation, let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) else { return }
+            Task { @MainActor in
+                let panel = NSSavePanel()
+                panel.allowedContentTypes = [.png]; panel.nameFieldStringValue = name
+                guard panel.runModal() == .OK, let url = panel.url else { return }
+                try? png.write(to: url)
             }
-            .menuStyle(.button).buttonStyle(SiteSettingsButtonStyle()).menuIndicator(.hidden)
-            .tint(ChocoTheme.text).font(ChocoTheme.font(13, weight: .semibold))
-            .frame(maxWidth: .infinity, alignment: .leading).frame(height: 40)
-            .disabled(currentTab == nil || splitCandidates.isEmpty)
-            .accessibilityIdentifier("split-toggle")
         }
     }
 
-    @ViewBuilder private var extensionActions: some View {
-        if let profileID = model.activeSession?.profileID ?? model.selectedSpace?.profileID {
-            let entries = model.extensions.loadedContexts(profileID: profileID)
-            if !entries.isEmpty {
-                let tab = model.extensionHost.activeTab(profileID: profileID)
-                sectionHeader("拡張機能")
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: ChocoSpace.sm), count: 4), spacing: ChocoSpace.sm) {
-                    ForEach(entries, id: \.item.id) { entry in
-                        let action = entry.context.action(for: tab)
-                        Button {
-                            model.showsSiteControls = false
-                            model.extensionHost.perform(entry.context)
-                        } label: {
-                            quickTile {
-                                if let icon = action?.icon(for: CGSize(width: 32, height: 32)) {
-                                    Image(nsImage: icon).resizable().aspectRatio(contentMode: .fit).frame(width: 16, height: 16)
-                                } else {
-                                    Image(systemName: "puzzlepiece.extension").font(.system(size: 13))
-                                }
-                            }
-                            .overlay(alignment: .topTrailing) {
-                                if let badge = action?.badgeText, !badge.isEmpty {
-                                    Text(badge).font(ChocoTheme.font(9, weight: .bold)).lineLimit(1)
-                                        .padding(.horizontal, 3).background(model.tint, in: Capsule()).offset(x: 3, y: -3)
-                                }
-                            }
+    /// Figma "extensions": installed extensions then a "+" tile, 8pt apart in rows of four.
+    private var extensionTiles: some View {
+        let profileID = model.activeSession?.profileID ?? model.selectedSpace?.profileID
+        let entries = profileID.map { model.extensions.loadedContexts(profileID: $0) } ?? []
+        let tab = profileID.flatMap { model.extensionHost.activeTab(profileID: $0) }
+        return LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: ChocoSpace.u(8)), count: 4), spacing: ChocoSpace.u(8)) {
+            ForEach(entries, id: \.item.id) { entry in
+                let action = entry.context.action(for: tab)
+                Button {
+                    model.showsSiteControls = false
+                    model.extensionHost.perform(entry.context)
+                } label: {
+                    extensionTile {
+                        if let icon = action?.icon(for: CGSize(width: 32, height: 32)) {
+                            Image(nsImage: icon).resizable().aspectRatio(contentMode: .fit).frame(width: ChocoSpace.u(16), height: ChocoSpace.u(16))
+                        } else {
+                            Image(systemName: "puzzlepiece.extension").font(.system(size: ChocoSpace.u(13)))
                         }
-                        .buttonStyle(ChocoPressStyle(radius: 7, tint: .white.opacity(0.2), hoverTint: .white.opacity(0.1)))
-                        .disabled(action?.isEnabled == false)
-                        .help(action?.label.isEmpty == false ? action?.label ?? entry.item.name : entry.item.name)
-                        .accessibilityLabel(entry.item.name)
-                        .accessibilityIdentifier("extension-action-\(entry.item.id)")
+                    }
+                    .overlay(alignment: .topTrailing) {
+                        if let badge = action?.badgeText, !badge.isEmpty {
+                            Text(badge).font(ChocoTheme.font(9, weight: .bold)).lineLimit(1)
+                                .padding(.horizontal, 3).background(model.tint, in: Capsule()).offset(x: 3, y: -3)
+                        }
                     }
                 }
+                .buttonStyle(ChocoPressStyle(radius: 7, tint: .white.opacity(0.2), hoverTint: .white.opacity(0.1)))
+                .disabled(action?.isEnabled == false)
+                .help(action?.label.isEmpty == false ? action?.label ?? entry.item.name : entry.item.name)
+                .accessibilityLabel(entry.item.name)
+                .accessibilityIdentifier("extension-action-\(entry.item.id)")
             }
+            Button {
+                model.showsSiteControls = false
+                NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+            } label: { extensionTile { DesignIcon("77a3c", size: 13).opacity(0.8) } }
+                .buttonStyle(ChocoPressStyle(radius: 7, tint: .white.opacity(0.2), hoverTint: .white.opacity(0.1)))
+                .accessibilityLabel("拡張機能を追加").accessibilityIdentifier("site-add-extension").help("拡張機能を追加")
         }
     }
 
     private var footer: some View {
         HStack {
-            HStack(spacing: 5) {
+            HStack(spacing: ChocoSpace.u(5)) {
                 if pageURL?.scheme?.lowercased() == "https" { DesignIcon("dda43", size: 12).opacity(0.85) }
-                else { Image(systemName: "globe").font(.system(size: 11)) }
+                else { Image(systemName: "globe").font(.system(size: ChocoSpace.u(11))) }
                 Text(pageURL.map { $0.scheme?.lowercased() == "https" ? "HTTPS接続" : "HTTP接続" } ?? "ページ未選択")
                     .font(ChocoTheme.font(11, weight: .semibold))
             }
-            .padding(.leading, 8).padding(.trailing, 10).frame(height: 26)
+            .padding(.leading, ChocoSpace.u(8)).padding(.trailing, ChocoSpace.u(10)).frame(height: ChocoSpace.u(26))
             .background(.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 7))
             .help("URLの接続方式です。サイトの信頼性を保証する表示ではありません。")
             .accessibilityIdentifier("site-connection")
             Spacer(minLength: 0)
             Menu {
+                Button("URLをコピー") { copyURL() }.disabled(pageURL == nil)
+                Button(currentTab?.isPinned == true ? "固定を解除" : "タブを固定") { togglePinned() }.disabled(pageURL == nil)
+                Button(matchingFavorite == nil ? "お気に入りに追加" : "お気に入りを解除") { toggleFavorite() }.disabled(!canToggleFavorite)
+                Button("ページ内を検索") { model.showsSiteControls = false; model.showsFind = true }.disabled(pageURL == nil)
+                Divider()
+                if model.state.split != nil {
+                    Button("分割を入れ替える") { model.showsSiteControls = false; model.send(.swapSplit) }
+                    Button("分割表示を解除") { model.showsSiteControls = false; model.send(.clearSplit) }
+                } else {
+                    Menu("分割表示") {
+                        ForEach(splitCandidates) { tab in
+                            Button(tab.displayTitle) { model.showsSiteControls = false; model.split(with: tab) }
+                        }
+                    }.disabled(currentTab == nil || splitCandidates.isEmpty)
+                }
+                Divider()
                 Button("URLを編集") { model.showCommand(.navigate) }.disabled(pageURL == nil)
                 Button("再読み込み") { model.showsSiteControls = false; model.activeSession?.reload() }.disabled(pageURL == nil)
                 Button("閉じる") { model.showsSiteControls = false }
             } label: {
-                DesignIcon("a3077", size: 14).frame(width: 26, height: 26)
+                DesignIcon("a3077", size: 14).frame(width: ChocoSpace.u(26), height: ChocoSpace.u(26))
                     .background(.white.opacity(0.1), in: Circle())
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("その他のページ操作").accessibilityIdentifier("site-more")
             }.menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).fixedSize()
-                .accessibilityLabel("その他のページ操作").accessibilityIdentifier("site-more")
-        }.frame(height: 28)
+        }.frame(height: ChocoSpace.u(28))
     }
 
     private func sectionHeader(_ title: String) -> some View {
         Text(title).font(ChocoTheme.font(13, weight: .bold))
-            .frame(maxWidth: .infinity, alignment: .leading).frame(height: 22)
+            .frame(maxWidth: .infinity, alignment: .leading).frame(height: ChocoSpace.u(22))
     }
 
     /// Figma: four tiles share the 204pt content width equally (flex 1, 8pt gaps), so the row spans edge to edge.
     private func quickTile<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        content().frame(maxWidth: .infinity).frame(height: 26)
+        content().frame(maxWidth: .infinity).frame(height: ChocoSpace.u(26))
             .background(Color(hex: "232323"), in: RoundedRectangle(cornerRadius: 7))
+            .contentShape(RoundedRectangle(cornerRadius: 7))
+    }
+
+    private func extensionTile<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        content().frame(maxWidth: .infinity).frame(height: ChocoSpace.u(26))
+            .background(.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 7))
             .contentShape(RoundedRectangle(cornerRadius: 7))
     }
 
     private func settingsRow<Icon: View>(title: String, subtitle: String, @ViewBuilder icon: () -> Icon) -> some View {
         HStack(spacing: ChocoSpace.sm) {
-            icon().frame(width: 28, height: 28).background(.white.opacity(0.2), in: Circle())
+            icon().frame(width: ChocoSpace.u(28), height: ChocoSpace.u(28)).background(.white.opacity(0.2), in: Circle())
             VStack(alignment: .leading, spacing: 0) {
                 Text(title).font(ChocoTheme.font(13, weight: .semibold)).lineLimit(1)
                 Text(subtitle).font(ChocoTheme.font(11)).foregroundStyle(ChocoTheme.secondary).lineLimit(1)
             }.frame(maxWidth: .infinity, alignment: .leading)
-        }.frame(maxWidth: .infinity, alignment: .leading).frame(height: 40)
+        }.frame(maxWidth: .infinity, alignment: .leading).frame(height: ChocoSpace.u(40))
             .contentShape(RoundedRectangle(cornerRadius: 8))
     }
 
     private func copyURL() {
         guard let pageURL else { return }
         NSPasteboard.general.clearContents()
-        copied = NSPasteboard.general.setString(pageURL.absoluteString, forType: .string)
+        NSPasteboard.general.setString(pageURL.absoluteString, forType: .string)
     }
 
     private func togglePinned() {

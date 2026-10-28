@@ -35,9 +35,9 @@ struct SettingsToolbar: View {
                 Button { page = item } label: {
                     VStack(spacing: 3) {
                         if let symbol = item.symbol {
-                            Image(systemName: symbol).font(.system(size: 17))
+                            Image(systemName: symbol).font(.system(size: ChocoSpace.u(17)))
                                 .foregroundStyle(page == item ? SettingsStyle.accentText : SettingsStyle.secondary)
-                                .frame(width: 22, height: 22)
+                                .frame(width: ChocoSpace.u(22), height: ChocoSpace.u(22))
                         } else {
                             DesignIcon("settings-\(page == item ? item.selectedIcon : item.icon)", size: 22)
                         }
@@ -45,8 +45,8 @@ struct SettingsToolbar: View {
                             .font(ChocoTheme.font(11, weight: .medium))
                             .foregroundStyle(page == item ? SettingsStyle.accentText : SettingsStyle.secondary)
                     }
-                    .padding(.horizontal, 8).padding(.top, 5).padding(.bottom, 4)
-                    .frame(minWidth: 50)
+                    .padding(.horizontal, ChocoSpace.u(8)).padding(.top, ChocoSpace.u(5)).padding(.bottom, ChocoSpace.u(4))
+                    .frame(minWidth: ChocoSpace.u(50))
                     .background(page == item ? SettingsStyle.selected : .clear, in: RoundedRectangle(cornerRadius: 6))
                     .overlay { RoundedRectangle(cornerRadius: 6).strokeBorder(.white.opacity(page == item ? 0.08 : 0)) }
                     .contentShape(Rectangle())
@@ -56,8 +56,8 @@ struct SettingsToolbar: View {
                 .accessibilityAddTraits(page == item ? .isSelected : [])
             }
         }
-        .padding(.bottom, 7)
-        .frame(maxWidth: .infinity).frame(height: 88 - titlebarHeight, alignment: .bottom)
+        .padding(.bottom, ChocoSpace.u(7))
+        .frame(maxWidth: .infinity).frame(height: ChocoSpace.u(88) - titlebarHeight, alignment: .bottom)
         .background(SettingsStyle.toolbar)
         .overlay(alignment: .bottom) { Rectangle().fill(Color(hex: "111214")).frame(height: 1) }
     }

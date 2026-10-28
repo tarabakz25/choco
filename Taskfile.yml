@@ -1,7 +1,7 @@
 version: '3'
 
 vars:
-  APP: build/choco.app
+  APP: build/choco-browser.app
 
 tasks:
   default:
@@ -11,20 +11,60 @@ tasks:
       - task --list
 
   build:
-    desc: デバッグビルドして build/choco.app を作成
+    desc: デバッグビルドして build/choco-browser.app を作成
     cmds:
       - ./scripts/build-app.sh debug
 
   build:release:
-    desc: リリースビルドして build/choco.app を作成
+    desc: リリースビルドして build/choco-browser.app を作成
     cmds:
       - ./scripts/build-app.sh release
 
+  dmg:
+    desc: リリースビルドして配布用 build/choco-browser-<version>.dmg を作成（VERSION=0.1.0 task dmg）
+    cmds:
+      - ./scripts/make-dmg.sh
+
+  icon:
+    desc: 仮アプリアイコン（AppSupport/AppIcon.icns, site/public/icon.png）を再生成
+    cmds:
+      - ./scripts/make-icon.sh
+
+  site:dev:
+    desc: 紹介サイト（Astro）の開発サーバーを起動 → http://localhost:4321/choco/
+    dir: site
+    cmds:
+      - bun install
+      - bun run dev
+
+  site:build:
+    desc: 紹介サイトをビルドして site/dist を作成し、型チェックも行う
+    dir: site
+    cmds:
+      - bun install --frozen-lockfile
+      - bunx tsc --noEmit
+      - bun run build
+
+  site:remotion:
+    desc: Remotion Studio を起動してサイトのデモ映像を編集・プレビュー
+    dir: site
+    cmds:
+      - bun install
+      - bun run remotion
+
+  site:og:
+    desc: SNS 共有用の画像 site/public/og.png を Remotion で再生成
+    dir: site
+    cmds:
+      - bun install
+      - bun run og
+
   run:
-    desc: ビルドして choco.app を起動
+    desc: ビルドして choco-browser.app を起動（起動中のアプリは終了してから開き直す）
     deps: [build]
     cmds:
-      - open {{.APP}}
+      # open は起動中のアプリを前面に出すだけで再起動しないため、先に終了させる
+      - ./scripts/relaunch-app.sh {{.APP}}
 
   test:
     desc: 非UIテストを実行（追加引数は task test -- --filter BrowserAppTests）

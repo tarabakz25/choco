@@ -24,15 +24,20 @@ struct BrowserWindow: View {
 
     @ChocoReducedMotion private var reduceMotion: Bool
 
+    /// Colour mode of the selected Space (DESIGN.md §7); the window chrome, sidebar and empty page follow it.
+    private var theme: SpaceTheme { model.currentSpaceTheme }
+    /// `Space 切替` (DESIGN.md §11): the window colour is the mix of the two Spaces' palettes while `AppModel` animates a
+    /// switch (320 ms spring) or a swipe drags it, so it is never given an animation of its own here.
+    private var themeBackground: some View { theme.sidebar }
     private var commandPresented: Bool { model.commandMode != nil }
     private var modalPresented: Bool { commandPresented || model.showsSiteControls || model.showsNewMenu }
     private var sidebarPresented: Bool { !model.showsArchive && (model.state.sidebarVisible || sidebarPeek) }
     private var floatingSidebar: Bool { sidebarPeek && !model.state.sidebarVisible && !model.showsArchive }
     private var sidebarPose: Int { model.showsArchive ? 3 : model.state.sidebarVisible ? 2 : sidebarPeek ? 1 : 0 }
     private var reservationPose: Int { model.showsArchive ? 2 : model.state.sidebarVisible ? 1 : 0 }
-    private var sidebarAnimation: Animation? { reduceMotion ? nil : ChocoMotion.sidebar }
+    private var sidebarAnimation: Animation? { reduceMotion ? nil : ChocoMotion.sidebar(presented: sidebarPresented) }
     private var opacityAnimation: Animation? { reduceMotion ? nil : ChocoMotion.sidebarOpacity }
-    private var commandAnimation: Animation? { reduceMotion ? nil : ChocoMotion.command }
+    private var commandAnimation: Animation? { reduceMotion ? nil : ChocoMotion.command(presented: commandPresented) }
     private var tabAnimation: Animation? { reduceMotion ? nil : ChocoMotion.tabLifecycle }
 
     var body: some View {
@@ -49,7 +54,7 @@ struct BrowserWindow: View {
                     onEntered: { edgeHovered = true; revealSidebar() },
                     onExited: { edgeHovered = false; schedulePeekDismissal() }
                 )
-                .frame(width: 10, height: geometry.size.height)
+                .frame(width: ChocoSpace.u(10), height: geometry.size.height)
                 .accessibilityHidden(true)
 
                 hiddenSidebarControls
@@ -82,7 +87,7 @@ struct BrowserWindow: View {
                     SiteControlsView(model: model)
                         .frame(width: ChocoTheme.siteControlsWidth)
                         .fixedSize(horizontal: false, vertical: true)
-                        .offset(x: min(max(8, rect.maxX - 120), geometry.size.width - 228), y: rect.maxY + 4)
+                        .offset(x: min(max(8, rect.maxX - ChocoSpace.u(120)), geometry.size.width - ChocoSpace.u(228)), y: rect.maxY + ChocoSpace.u(7))
                         // SiteControlsView owns its Figma entry spring/fade. Only
                         // removal gets an outer transition, so entry isn't doubled.
                         .transition(.asymmetric(insertion: .identity, removal: .opacity))
@@ -102,15 +107,16 @@ struct BrowserWindow: View {
                     NewMenuView(model: model)
                         .fixedSize()
                         .position(x: max(NewMenuView.width / 2 + 8, rect.maxX - NewMenuView.width / 2),
-                                  y: rect.minY - 14 - 129)
+                                  y: rect.minY - ChocoSpace.u(14) - ChocoSpace.u(129))
                         .transition(.asymmetric(insertion: .identity, removal: .opacity))
                         .accessibilityElement(children: .contain)
                 }
             }
             .animation(reduceMotion ? nil : ChocoMotion.dismiss, value: model.showsNewMenu)
         }
-        .frame(minWidth: 760, minHeight: 500)
-        .background(ChocoTheme.sidebar)
+        .frame(minWidth: 960, minHeight: 600)
+        .background(themeBackground)
+        .environment(\.spaceTheme, theme)
         .background(WindowReference { window in
             model.browserWindow = window
             configureWindow(window)
@@ -123,6 +129,7 @@ struct BrowserWindow: View {
             synchronizePages()
         }
         .onChange(of: reduceMotion) { _, _ in synchronizePages(forceImmediate: true) }
+        .onChange(of: reduceMotion, initial: true) { _, reduced in model.reducesMotion = reduced }
         .onChange(of: model.state.sidebarVisible) { _, _ in
             edgeHovered = false
             sidebarPeek = false
@@ -190,7 +197,7 @@ struct BrowserWindow: View {
                     HStack {
                         Image(systemName: "arrow.down.circle")
                         Text("ダウンロード中 · \(session.activeDownloadCount)件")
-                        if let progress = session.downloadProgress { ProgressView(value: progress).frame(width: 100) }
+                        if let progress = session.downloadProgress { ProgressView(value: progress).frame(width: ChocoSpace.u(100)) }
                         Spacer()
                     }.font(ChocoTheme.font(11)).foregroundStyle(.secondary).padding(ChocoSpace.sm)
                 }
@@ -207,19 +214,19 @@ struct BrowserWindow: View {
             .padding(.leading, model.showsArchive ? 1 : model.state.sidebarVisible ? -1 : ChocoTheme.contentInset)
             .animation(sidebarAnimation, value: reservationPose)
         }
-        .background(ChocoTheme.sidebar)
+        .background(theme.sidebar)
     }
 
     private func sidebarChrome(height: CGFloat) -> some View {
         BrowserSidebar(model: model)
-            .frame(width: sidebarWidth, height: max(0, height - (floatingSidebar ? 12 : 0)))
-            .background(ChocoTheme.sidebar)
+            .frame(width: sidebarWidth, height: max(0, height - (floatingSidebar ? ChocoSpace.u(12) : 0)))
+            .background(theme.sidebar)
             .clipShape(RoundedRectangle(cornerRadius: floatingSidebar ? 10 : 0))
             .overlay {
                 RoundedRectangle(cornerRadius: floatingSidebar ? 10 : 0)
-                    .strokeBorder(Color.white.opacity(floatingSidebar ? 0.12 : 0), lineWidth: 1)
+                    .strokeBorder(Color.white.opacity(floatingSidebar ? 0.1 : 0), lineWidth: 1)
             }
-            .shadow(color: .black.opacity(floatingSidebar ? 0.35 : 0), radius: floatingSidebar ? 16 : 0, x: 4, y: 6)
+            .shadow(color: .black.opacity(floatingSidebar ? 0.45 : 0), radius: floatingSidebar ? 16 : 0, x: 0, y: 10)
             .overlay(alignment: .trailing) {
                 Rectangle().fill(Color.clear).frame(width: 4).contentShape(Rectangle())
                     .gesture(DragGesture(minimumDistance: 1).onChanged { value in
@@ -236,7 +243,6 @@ struct BrowserWindow: View {
             .offset(x: sidebarPresented ? (floatingSidebar ? 6 : 0) : -sidebarWidth, y: floatingSidebar ? 6 : 0)
             .animation(sidebarAnimation, value: sidebarPose)
             .allowsHitTesting(sidebarPresented && !modalPresented)
-            .accessibilityHidden(!sidebarPresented || modalPresented)
             .onHover { hovering in
                 // The chrome is always mounted, so its actual pointer state survives
                 // peek-to-pin instead of being reset by a second view's creation.
@@ -246,16 +252,18 @@ struct BrowserWindow: View {
             }
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier(model.state.sidebarVisible ? "sidebar-docked" : "sidebar-peek")
+            // Hide after wrapping, so a dismissed sidebar leaves no empty labelled container behind.
+            .accessibilityHidden(!sidebarPresented || modalPresented)
     }
 
     private var hiddenSidebarControls: some View {
         Button { model.send(.toggleSidebar) } label: {
-            DesignIcon("de36e", size: 16).frame(width: 28, height: 28)
-                .background(ChocoTheme.sidebar.opacity(0.95), in: RoundedRectangle(cornerRadius: 6))
+            DesignIcon("de36e", size: 16).frame(width: ChocoSpace.u(28), height: ChocoSpace.u(28))
+                .background(theme.sidebar.opacity(0.95), in: RoundedRectangle(cornerRadius: 6))
         }
         .buttonStyle(ChocoPressStyle()).help("サイドバーを表示 (⌘S)")
         .accessibilityLabel("サイドバーを表示").accessibilityIdentifier("show-sidebar")
-        .padding(.leading, ChocoSpace.lg).padding(.top, 14)
+        .padding(.leading, ChocoSpace.lg).padding(.top, 28 - ChocoSpace.u(28) / 2) // keeps the button centred where the native traffic lights are
     }
 
     private var commandLayer: some View {
@@ -264,12 +272,15 @@ struct BrowserWindow: View {
                 if commandPresented {
                     Color.black.opacity(0.001).ignoresSafeArea()
                         .contentShape(Rectangle()).onTapGesture { model.commandMode = nil }
+                        // A tappable backdrop would otherwise merge the whole layer into one accessibility
+                        // container, stretching the palette's frame to the window.
+                        .accessibilityHidden(true)
                         .transition(.opacity)
                     CommandPalette(model: model)
-                        .frame(width: min(668, geometry.size.width - 2 * ChocoSpace.xl))
+                        .frame(width: min(ChocoSpace.u(668), geometry.size.width - 2 * ChocoSpace.xl))
                         .fixedSize(horizontal: false, vertical: true)
                         .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
-                        .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.98)))
+                        .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.96)))
                 }
             }
             .frame(width: geometry.size.width, height: geometry.size.height)
@@ -289,14 +300,26 @@ struct BrowserWindow: View {
         peekDismissTask?.cancel()
         guard sidebarPeek && !sidebarHovered && !edgeHovered && !model.showsSiteControls && !model.showsNewMenu && model.editor == nil else { return }
         peekDismissTask = Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(220))
-            guard !Task.isCancelled && !sidebarHovered && !edgeHovered && !model.showsSiteControls && !model.showsNewMenu && model.editor == nil else { return }
-            sidebarPeek = false
+            while true {
+                try? await Task.sleep(for: .milliseconds(220))
+                guard !Task.isCancelled && !sidebarHovered && !edgeHovered && !model.showsSiteControls && !model.showsNewMenu && model.editor == nil else { return }
+                // A fast pointer jump from the reveal edge into the sidebar can skip its hover-enter event,
+                // so trust the real pointer position before dismissing.
+                guard pointerIsOverSidebar else { sidebarPeek = false; return }
+            }
         }
+    }
+
+    private var pointerIsOverSidebar: Bool {
+        guard let window = model.browserWindow, let content = window.contentView else { return false }
+        let point = window.mouseLocationOutsideOfEventStream
+        // The floating sidebar is inset 6pt and drawn at `sidebarWidth`.
+        return content.bounds.contains(point) && point.x <= sidebarWidth + 6
     }
 
     private func configureWindow(_ window: NSWindow) {
         window.titlebarAppearsTransparent = true
+        TrafficLightInset.install(on: window, inset: 6, scale: ChocoSpace.scale)
         window.backgroundColor = NSColor(red: 94 / 255, green: 92 / 255, blue: 92 / 255, alpha: 1)
         let hidden = !model.state.sidebarVisible && !sidebarPeek && !model.showsArchive
         for button in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
@@ -313,13 +336,20 @@ struct BrowserWindow: View {
             Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
             TextField("ページ内を検索", text: $model.findText)
                 .accessibilityIdentifier("find-input")
-                .focused($findFocused).onAppear { findFocused = true }
+                .focused($findFocused)
+                .task {
+                    // Menu key equivalents restore the previous responder after onAppear (see the command bar).
+                    await Task.yield()
+                    do { try await Task.sleep(for: .milliseconds(30)) } catch { return }
+                    guard model.showsFind, !Task.isCancelled else { return }
+                    findFocused = true
+                }
                 .textFieldStyle(.plain).onSubmit { model.activeSession?.find(model.findText) }
                 .onChange(of: model.findText) { _, value in model.activeSession?.find(value) }
             Button { model.activeSession?.find(model.findText, backwards: true) } label: { Image(systemName: "chevron.up") }
             Button { model.activeSession?.find(model.findText) } label: { Image(systemName: "chevron.down") }
             Button { model.showsFind = false } label: { Image(systemName: "xmark") }
-        }.buttonStyle(.borderless).padding(10).background(.background)
+        }.buttonStyle(.borderless).padding(ChocoSpace.u(10)).background(.background)
     }
 
     /// Resolve only currently selected Core records. Retiring presentations keep
@@ -476,7 +506,7 @@ struct BrowserWindow: View {
 
     /// With no tab open the page area is just the dim gradient; there is no message or button.
     private var welcome: some View {
-        ChocoTheme.emptyContent.frame(maxWidth: .infinity, maxHeight: .infinity).accessibilityHidden(true)
+        SpaceEmptyContent(theme: theme).frame(maxWidth: .infinity, maxHeight: .infinity).accessibilityHidden(true)
     }
 }
 
@@ -487,8 +517,8 @@ private struct BrowserPane: View {
     var body: some View {
         ZStack {
             if session.url == nil || session.url?.absoluteString == "about:blank" {
-                VStack(spacing: 14) {
-                    Image(systemName: "sparkle").font(.system(size: 40, weight: .light)).foregroundStyle(ChocoTheme.secondary)
+                VStack(spacing: ChocoSpace.u(14)) {
+                    Image(systemName: "sparkle").font(.system(size: ChocoSpace.u(40), weight: .light)).foregroundStyle(ChocoTheme.secondary)
                     Text("新しいタブ").font(.title2.weight(.medium))
                     Button("検索またはURLを入力  ⌘L") { model.showCommand(.navigate) }.buttonStyle(.bordered)
                 }.frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -501,7 +531,7 @@ private struct BrowserPane: View {
                     Text("ページを開けませんでした").font(.headline)
                     Text(message).font(.callout).foregroundStyle(.secondary).textSelection(.enabled)
                     Button("再試行") { session.reload() }.buttonStyle(.borderedProminent)
-                }.padding(30).frame(maxWidth: 480)
+                }.padding(ChocoSpace.u(30)).frame(maxWidth: ChocoSpace.u(480))
                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
             }
         }
@@ -515,7 +545,7 @@ private struct BrowserPane: View {
     }
 }
 
-private struct WebViewMount: NSViewRepresentable {
+struct WebViewMount: NSViewRepresentable {
     let webView: WKWebView
     let onFocus: () -> Void
     func makeNSView(context: Context) -> WebViewContainer {
@@ -557,7 +587,7 @@ private final class WindowReferenceView: NSView {
     }
 }
 
-private final class WebViewContainer: NSView {
+final class WebViewContainer: NSView {
     var onFocus: (() -> Void)?
     override func layout() {
         super.layout()
