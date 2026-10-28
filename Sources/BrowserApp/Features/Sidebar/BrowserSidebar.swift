@@ -348,7 +348,7 @@ struct BrowserSidebar: View {
                         SiteIcon(url: favorite.url, size: 14)
                             .frame(width: ChocoSpace.u(56), height: ChocoSpace.u(40))
                     }
-                    .buttonStyle(FavoriteTileStyle(isSelected: model.state.selectedFavoriteID == favorite.id)).help(favorite.title)
+                    .buttonStyle(FavoriteTileStyle(isSelected: model.state.selectedFavoriteID == favorite.id, accent: SiteIcon.accent(for: favorite.url))).help(favorite.title)
                     .accessibilityLabel(favorite.title).accessibilityIdentifier("favorite-\(favorite.id)")
                     .contextMenu {
                         Button("編集…") { model.editor = .favorite(favorite.id) }
@@ -818,30 +818,42 @@ private struct FavoriteDropDelegate: DropDelegate {
 }
 
 /// The URL field's trailing 20pt tile (Figma `site controls`): lit while pressed and while its popover is open.
-/// Figma `Favorite Tile`: 6% at rest, 7% on hover, 12% selected; pressing keeps 12% and shrinks the icon to 12pt at 92%.
+/// Figma `Favorite Tile`: 6% at rest, 7% white on hover, 12% selected; pressing keeps 12% and shrinks the icon to 12pt at 92%.
+/// A selected tile also gets a 1.5pt `accent` border (70%), and hovering it tints the background with `accent` at 15%
+/// (Accent Border / Accent Tint layers). Unselected tiles only lighten on hover.
 private struct FavoriteTileStyle: ButtonStyle {
     let isSelected: Bool
+    let accent: Color
 
     func makeBody(configuration: Configuration) -> some View {
-        TileBody(configuration: configuration, isSelected: isSelected)
+        TileBody(configuration: configuration, isSelected: isSelected, accent: accent)
     }
 
     private struct TileBody: View {
         let configuration: Configuration
         let isSelected: Bool
+        let accent: Color
         @Environment(\.spaceTheme) private var theme
         @ChocoReducedMotion private var reduceMotion: Bool
         @State private var hovering = false
 
         var body: some View {
             let fill = configuration.isPressed || isSelected ? ChocoTheme.selected : hovering ? theme.field : ChocoTheme.tile
+            let tinted = isSelected && hovering
             configuration.label
                 .scaleEffect(configuration.isPressed ? 12.0 / 14.0 : 1)
-                .background(fill, in: RoundedRectangle(cornerRadius: 8))
+                .background {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 8).fill(fill)
+                        RoundedRectangle(cornerRadius: 8).fill(accent.opacity(0.15)).opacity(tinted ? 1 : 0)
+                        RoundedRectangle(cornerRadius: 8).strokeBorder(accent.opacity(0.7), lineWidth: 1.5).opacity(isSelected ? 1 : 0)
+                    }
+                }
                 .opacity(configuration.isPressed ? 0.92 : 1)
                 .contentShape(RoundedRectangle(cornerRadius: 8))
                 .onHover { hovering = $0 }
                 .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hovering)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: isSelected)
                 .animation(reduceMotion ? nil : .timingCurve(0.2, 0.8, 0.2, 1, duration: configuration.isPressed ? 0.07 : 0.23), value: configuration.isPressed)
         }
     }

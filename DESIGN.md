@@ -447,7 +447,7 @@
 | Window Controls | 52×12 | H gap 8、円 12×12 | 円 | Inactive: `window/traffic-inactive` |
 | Toolbar Icon Button | 28×28 | – | 6 | icon 16 @0.62。Hover: `sidebar/hover`、Pressed: `sidebar/selected`、Disabled: opacity 0.35 |
 | Sidebar URL Field | 184×32 | H gap 6、padding 0/6/0/10 | 8 | fill `sidebar/field`(使用時 7%)。search icon 13 @0.55、`Sidebar/Field` + `text/tertiary`。Hover/Selected あり |
-| Favorite Tile | 56×40 | – | 8 | fill `sidebar/tile`(6%)。Hover `sidebar/field`、Selected `sidebar/selected`、Pressed opacity 0.92。favicon 14。1 行 6 個 gap 8(184 幅) |
+| Favorite Tile | 56×40 | – | 8 | fill `sidebar/tile`(6%)。Hover `sidebar/field`(白で明るくなるだけ)、Selected `sidebar/selected` + Favicon 色の枠 1.5(70%)、Selected 中の Hover は背景に Favicon 色 15% を重ねる、Pressed opacity 0.92。favicon 14。1 行 6 個 gap 8(184 幅) |
 | Sidebar Folder Row | 184×32 | H gap 8、padding 0/10/0/10 | 8 | chevron 12 @0.6、`Sidebar/Tab Title` + `text/secondary`。Hover `sidebar/hover`、Pressed `sidebar/selected` |
 | Sidebar Divider | 184×16 | H gap 6、padding 0/4/0/4 | – | 線 1px `sidebar/divider`(15%)。Clear ボタン 39×14(arrow-down 9 + `Sidebar/Caption`)、opacity 0.75 |
 | New Tab Row | 184×32 | H gap 6、padding 0/10/0/10 | 8 | アイコン枠 16(plus 11 @0.75)、`Sidebar/Tab Title` + `text/primary`。Selected: `sidebar/selected` (12%) |
