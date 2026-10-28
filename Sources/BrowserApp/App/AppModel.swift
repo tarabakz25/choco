@@ -48,7 +48,11 @@ import WebKit
         extensionHost.model = self
         extensions.delegate = extensionHost
         pool.extensions = extensions
-        pool.onSessionAdded = { [extensionHost] session in extensionHost.sessionAdded(session) }
+        pool.onSessionAdded = { [weak self, extensionHost] session in
+            extensionHost.sessionAdded(session)
+            // Sessions are created when their view mounts, after reconcile has already run.
+            self?.notifyExtensionsOfDisplayedSession()
+        }
         pool.onSessionRemoved = { [extensionHost] session in extensionHost.sessionRemoved(session) }
         if state.tabs.count == 1, let tab = state.tabs.first, tab.url == "about:blank", state.archive.isEmpty,
            let index = arguments.firstIndex(of: "--initial-url"), arguments.indices.contains(index + 1),
@@ -82,6 +86,18 @@ import WebKit
         if let id = navigationTabID, let tab = state.tabs.first(where: { $0.id == id }) { return session(for: tab) }
         if let id = state.selectedFavoriteID, let favorite = state.favorites.first(where: { $0.id == id }) { return session(for: favorite) }
         return nil
+    }
+
+    /// The session in front, including a displayed favorite, which has no tab ID.
+    private var displayedSession: WebSession? {
+        if let id = navigationTabID { return pool.existingSession(id: id) }
+        guard let id = state.selectedFavoriteID else { return nil }
+        let profile = selectedSpace?.profileID ?? state.profiles[0].id
+        return favoriteSessions["\(id):\(profile)"].flatMap { pool.existingSession(id: $0) }
+    }
+
+    private func notifyExtensionsOfDisplayedSession() {
+        extensionHost.activeTabMayHaveChanged(to: displayedSession)
     }
 
     func send(_ action: BrowserAction) {
@@ -204,7 +220,7 @@ import WebKit
         if let focusedPaneID, !visibleTabIDs.contains(focusedPaneID) { self.focusedPaneID = navigationTabID }
         recentTabIDs.removeAll { !validTabs.contains($0) }
         rememberSelectedTab()
-        extensionHost.activeTabMayHaveChanged(to: navigationTabID.flatMap { pool.existingSession(id: $0) })
+        notifyExtensionsOfDisplayedSession()
     }
 
     /// Selecting a split pane must also update persisted selection without collapsing the split.

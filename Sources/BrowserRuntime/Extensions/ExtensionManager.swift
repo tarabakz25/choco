@@ -242,12 +242,12 @@ public final class ExtensionManager {
         for work in waiters.removeValue(forKey: profileID) ?? [] { work() }
     }
 
+    /// Looks records up by ID on disk rather than through loaded contexts, which are already gone (or never loaded, if disabled).
     private func wipeStoredData(of id: String) async {
+        let types = WKWebExtensionController.allExtensionDataTypes
         for controller in controllers.values {
-            for context in controller.extensionContexts where context.uniqueIdentifier == id {
-                let record = await controller.dataRecord(ofTypes: WKWebExtensionController.allExtensionDataTypes, for: context)
-                if let record { await controller.removeData(ofTypes: WKWebExtensionController.allExtensionDataTypes, from: [record]) }
-            }
+            let records = await controller.dataRecords(ofTypes: types).filter { $0.uniqueIdentifier == id }
+            if !records.isEmpty { await controller.removeData(ofTypes: types, from: records) }
         }
     }
 
