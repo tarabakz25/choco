@@ -14,6 +14,8 @@ struct BrowserSidebar: View {
     @State private var clearHovered = false
     @AppStorage("choco.hidesEmptyFavoritesHint") private var hidesFavoritesHint = false
     @State private var favoritesDropTargeted = false
+    /// Width of the favorites grid, so the three columns can share it and the drop slot can be located.
+    @State private var favoritesWidth: CGFloat = 0
     @State private var pinnedDropTargeted = false
     @State private var tabPresentation: SidebarTabPresentation
     @State private var slide: SpaceSlide
@@ -340,13 +342,13 @@ struct BrowserSidebar: View {
     }
 
     private var favorites: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.fixed(FavoriteDropDelegate.tileWidth), spacing: FavoriteDropDelegate.columnGap), count: 3), alignment: .leading, spacing: FavoriteDropDelegate.rowGap) {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: FavoriteDropDelegate.columnGap), count: 3), alignment: .leading, spacing: FavoriteDropDelegate.rowGap) {
             ForEach(favoriteCells) { cell in
                 switch cell {
                 case .favorite(let favorite):
                     Button { model.send(.selectFavorite(favorite.id)) } label: {
                         SiteIcon(url: favorite.url, size: 14)
-                            .frame(width: ChocoSpace.u(56), height: ChocoSpace.u(40))
+                            .frame(maxWidth: .infinity).frame(height: ChocoSpace.u(40))
                     }
                     .buttonStyle(FavoriteTileStyle(isSelected: model.state.selectedFavoriteID == favorite.id, accent: SiteIcon.accent(for: favorite.url))).help(favorite.title)
                     .accessibilityLabel(favorite.title).accessibilityIdentifier("favorite-\(favorite.id)")
@@ -360,14 +362,15 @@ struct BrowserSidebar: View {
                     RoundedRectangle(cornerRadius: 8)
                         .strokeBorder(Color.white.opacity(0.4), style: StrokeStyle(lineWidth: 1, dash: [4, 3]))
                         .background(ChocoTheme.tile.opacity(0.5), in: RoundedRectangle(cornerRadius: 8))
-                        .frame(width: ChocoSpace.u(56), height: ChocoSpace.u(40))
+                        .frame(maxWidth: .infinity).frame(height: ChocoSpace.u(40))
                         .transition(.scale(scale: 0.8).combined(with: .opacity))
                         .accessibilityHidden(true)
                 }
             }
         }
         .animation(reduceMotion ? nil : ChocoMotion.favoriteReflow, value: favoriteCells)
-        .onDrop(of: [.plainText], delegate: FavoriteDropDelegate(model: model, tracksSlot: true, animation: reduceMotion ? nil : ChocoMotion.favoriteReflow, targeted: $favoritesDropTargeted))
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { favoritesWidth = $0 }
+        .onDrop(of: [.plainText], delegate: FavoriteDropDelegate(model: model, tracksSlot: true, gridWidth: favoritesWidth, animation: reduceMotion ? nil : ChocoMotion.favoriteReflow, targeted: $favoritesDropTargeted))
     }
 
     private func pinnedTabs(in spaceID: UUID) -> some View {
@@ -782,9 +785,11 @@ enum FavoriteCell: Identifiable, Equatable {
 /// Dropping a tab on Favorites moves it there. Over the tile grid a dashed slot follows the pointer
 /// and the tiles make room for it; releasing puts the favorite in that slot.
 private struct FavoriteDropDelegate: DropDelegate {
-    static let tileWidth: CGFloat = ChocoSpace.u(56), columnGap: CGFloat = ChocoSpace.sm, rowGap: CGFloat = ChocoSpace.u(8), tileHeight: CGFloat = ChocoSpace.u(40)
+    static let columnGap: CGFloat = ChocoSpace.sm, rowGap: CGFloat = ChocoSpace.u(8), tileHeight: CGFloat = ChocoSpace.u(40)
     let model: AppModel
     let tracksSlot: Bool
+    /// Width of the tile grid; the three columns share it, so tiles follow the sidebar width.
+    var gridWidth: CGFloat = 0
     let animation: Animation?
     @Binding var targeted: Bool
 
@@ -811,7 +816,8 @@ private struct FavoriteDropDelegate: DropDelegate {
 
     private func track(_ info: DropInfo) {
         guard tracksSlot else { return }
-        let column = min(2, max(0, Int(info.location.x / (Self.tileWidth + Self.columnGap))))
+        let tileWidth = max(1, (gridWidth - 2 * Self.columnGap) / 3)
+        let column = min(2, max(0, Int(info.location.x / (tileWidth + Self.columnGap))))
         let row = max(0, Int(info.location.y / (Self.tileHeight + Self.rowGap)))
         let index = min(model.state.favorites.count, row * 3 + column)
         if model.favoriteDropIndex != index { withAnimation(animation) { model.favoriteDropIndex = index } }
