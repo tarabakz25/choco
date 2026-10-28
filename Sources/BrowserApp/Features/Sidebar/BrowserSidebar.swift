@@ -270,8 +270,9 @@ struct BrowserSidebar: View {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(address, forType: .string)
                 } label: {
-                    DesignIcon("d4cd0", size: 14).opacity(0.55).frame(width: ChocoSpace.u(20), height: ChocoSpace.u(28))
+                    DesignIcon("d4cd0", size: 14).opacity(0.55).frame(width: ChocoSpace.u(20), height: ChocoSpace.u(20))
                 }
+                // 20pt square like the site-controls tile beside it, so the hover tint doesn't stretch to the field's height.
                 .buttonStyle(ChocoPressStyle(radius: 5)).help("URLをコピー").accessibilityLabel("URLをコピー")
                 .accessibilityIdentifier("copy-url")
                 Button { model.showsSiteControls.toggle() } label: {
@@ -881,9 +882,10 @@ private struct SiteControlsButtonStyle: ButtonStyle {
 
         var body: some View {
             let lit = configuration.isPressed || isActive
+            // At rest the tile has no fill; hovering lifts it to 12%, pressing or an open panel to 20%.
             configuration.label
                 .background {
-                    RoundedRectangle(cornerRadius: 5).fill(Color.white.opacity(lit ? 0.2 : 0.12))
+                    RoundedRectangle(cornerRadius: 5).fill(Color.white.opacity(lit ? 0.2 : hovering ? 0.12 : 0))
                         .frame(width: ChocoSpace.u(20), height: ChocoSpace.u(20))
                 }
                 .contentShape(Rectangle())
