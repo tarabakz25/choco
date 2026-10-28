@@ -19,12 +19,13 @@ public enum ChromeWebStore {
         return parts.dropFirst(detail + 1).first(where: isExtensionID)
     }
 
-    public static func downloadURL(for id: String) -> URL? {
+    /// `chromeVersion` is announced as `prodversion`; see `ChromeVersionResolver`.
+    public static func downloadURL(for id: String, chromeVersion: String = ChromeVersionResolver.fallback) -> URL? {
         guard isExtensionID(id) else { return nil }
         var components = URLComponents(string: "https://clients2.google.com/service/update2/crx")
         components?.queryItems = [
             URLQueryItem(name: "response", value: "redirect"),
-            URLQueryItem(name: "prodversion", value: "130.0.0.0"),
+            URLQueryItem(name: "prodversion", value: chromeVersion),
             URLQueryItem(name: "acceptformat", value: "crx3"),
             URLQueryItem(name: "x", value: "id=\(id)&installsource=ondemand&uc")
         ]

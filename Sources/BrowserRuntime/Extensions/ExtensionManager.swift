@@ -43,10 +43,12 @@ public final class ExtensionManager {
     @ObservationIgnored private var readyProfiles: Set<UUID> = []
     @ObservationIgnored private var waiters: [UUID: [@MainActor () -> Void]] = [:]
     @ObservationIgnored private var syncTask: Task<Void, Never>?
+    @ObservationIgnored private let chromeVersions: ChromeVersionResolver
 
-    public init(directory: URL) {
+    public init(directory: URL, chromeVersions: ChromeVersionResolver? = nil) {
         root = directory
         installed = Self.loadCatalog(in: directory)
+        self.chromeVersions = chromeVersions ?? ChromeVersionResolver(cacheURL: directory.appendingPathComponent("chrome-version.json"))
     }
 
     private var packagesDirectory: URL { root.appendingPathComponent("Packages", isDirectory: true) }
@@ -117,7 +119,8 @@ public final class ExtensionManager {
 
     /// Downloads a Chrome Web Store extension by listing URL or ID. The CRX signature is not verified.
     public func stage(storeReference: String) async throws -> StagedExtension {
-        guard let id = ChromeWebStore.extensionID(from: storeReference), let url = ChromeWebStore.downloadURL(for: id) else {
+        guard let id = ChromeWebStore.extensionID(from: storeReference) else { throw ExtensionError.invalidSource }
+        guard let url = ChromeWebStore.downloadURL(for: id, chromeVersion: await chromeVersions.current()) else {
             throw ExtensionError.invalidSource
         }
         let data: Data
