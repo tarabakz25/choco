@@ -356,6 +356,7 @@ import WebKit
         let memoryIDs = Set(lastInteraction.keys).union(scrollAnchors.keys).union(activityFlags.keys)
         for id in memoryIDs where !validRuntimes.contains(id) { clearHibernationMemory(id) }
         rememberSelectedTab()
+        extensionHost.pruneClosedTabs()
         notifyExtensionsOfDisplayedSession()
         scheduleHibernationIfOverCapacity()
     }
