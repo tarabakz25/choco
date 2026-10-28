@@ -720,16 +720,15 @@ private struct TabRowSurface<Content: View>: View {
                 }.allowsHitTesting(false)
             }
             .contentShape(Rectangle())
-            .onHover { hovering = $0 }
             .overlay {
-                TabDragSource(model: model, tab: tab, onPress: { pressed = $0 }, onClick: { model.select(tab) })
+                TabDragSource(model: model, tab: tab, onPress: { pressed = $0 }, onClick: { model.select(tab) },
+                              passthroughTrailing: hovering ? ChocoSpace.u(28) : 0)
             }
-            // Figma Tab Row: the close button shows only on hover; on the selected row it carries a 5% fill.
+            // Figma Tab Row: the close button shows only on hover, and tints only while the pointer is on it.
             .overlay(alignment: .trailing) {
                 if hovering {
                     Button { model.send(.closeTab(tab.id)) } label: {
                         DesignIcon("98f70", size: 12).opacity(0.7).frame(width: ChocoSpace.u(20), height: ChocoSpace.u(20))
-                            .background(isSelected && !pressed ? ChocoTheme.hover : Color.clear, in: RoundedRectangle(cornerRadius: 5))
                     }
                     .buttonStyle(ChocoPressStyle(radius: 5))
                     .padding(.trailing, ChocoSpace.u(6))
@@ -739,6 +738,8 @@ private struct TabRowSurface<Content: View>: View {
                     .transition(.asymmetric(insertion: .opacity, removal: .identity))
                 }
             }
+            // Outermost, so the close button (an overlay) counts as part of the row and doesn't end the hover.
+            .onHover { hovering = $0 }
             .animation(reduceMotion ? nil : .timingCurve(0.2, 0.8, 0.2, 1, duration: pressed ? 0.07 : 0.23), value: pressed)
             .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: hovering)
     }
