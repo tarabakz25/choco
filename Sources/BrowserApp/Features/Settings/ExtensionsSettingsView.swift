@@ -112,7 +112,7 @@ struct ExtensionsSettingsView: View {
             defer { isWorking = false }
             do {
                 let staged = try await stage()
-                guard model.extensionHost.confirmInstall(staged) else { manager.discard(staged); return }
+                guard await model.extensionHost.confirmInstall(staged, surface: .settings) else { manager.discard(staged); return }
                 let item = try await manager.commit(staged)
                 storeReference = ""
                 if let error = manager.loadErrors[item.id] {

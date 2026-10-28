@@ -15,6 +15,10 @@ import WebKit
     var commandText = ""
     var commandError: String?
     var editor: EditorRequest?
+    /// Extension install dialogs in the order they were asked for; the first one is on screen.
+    private(set) var extensionDialogs: [ExtensionDialogRequest] = []
+    var extensionDialog: ExtensionDialogRequest? { extensionDialogs.first }
+    @ObservationIgnored private var extensionDialogContinuations: [UUID: CheckedContinuation<Bool, Never>] = [:]
     var showsArchive = false
     var showsSiteControls = false
     var showsNewMenu = false
@@ -226,6 +230,22 @@ import WebKit
     }
 
     func showMainWindow() { browserWindow?.makeKeyAndOrderFront(nil) }
+
+    /// Shows an extension install dialog and waits for it. Returns whether the user confirmed; an error dialog's OK counts as confirming.
+    /// Dialogs asked for while another is open wait their turn.
+    func presentExtensionDialog(_ content: ExtensionDialogContent, surface: ExtensionDialogSurface = .browser) async -> Bool {
+        let request = ExtensionDialogRequest(content: content, surface: surface)
+        return await withCheckedContinuation { continuation in
+            extensionDialogContinuations[request.id] = continuation
+            extensionDialogs.append(request)
+        }
+    }
+
+    func resolveExtensionDialog(_ confirmed: Bool) {
+        guard !extensionDialogs.isEmpty else { return }
+        let request = extensionDialogs.removeFirst()
+        extensionDialogContinuations.removeValue(forKey: request.id)?.resume(returning: confirmed)
+    }
 
     func showCommand(_ mode: CommandMode) {
         showMainWindow()

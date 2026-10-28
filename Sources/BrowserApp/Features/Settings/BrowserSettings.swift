@@ -34,6 +34,7 @@ struct BrowserSettings: View {
         .preferredColorScheme(.dark)
         .tint(SettingsStyle.accent)
         .background(SettingsWindowTitle(title: page.rawValue, titlebarHeight: $titlebarHeight))
+        .overlay { ExtensionDialogLayer(model: model, surface: .settings, dims: true) }
         .sheet(isPresented: $showsProfileEditor) { EditorSheet(model: model, request: .profile) }
         .alert("Privacy and Security", isPresented: $showsPrivacyInfo) {
             Button("OK", role: .cancel) {}

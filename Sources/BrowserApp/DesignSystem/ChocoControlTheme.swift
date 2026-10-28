@@ -21,6 +21,9 @@ extension ChocoTheme {
 
     /// `dialog/*`: the indigo surface used by sheets that sit on top of a Space.
     enum Dialog {
+        /// `dialog/bg` and `dialog/border`: the card of the extension install dialogs (8b, 8d, 8e).
+        static let surface = Color(hex: "151B30")
+        static let surfaceBorder = Color(hex: "2C3350")
         static let fieldBackground = Color.white.opacity(0.03)
         static let fieldBorder = Color.white.opacity(0.09)
         static let text = Color.white

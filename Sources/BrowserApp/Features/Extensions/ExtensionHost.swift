@@ -149,53 +149,34 @@ import WebKit
 
     private var isInstalling = false
 
-    /// Asks the user to approve what the extension requests. Used by Settings and by the Web Store page button.
-    func confirmInstall(_ staged: StagedExtension) -> Bool {
-        let alert = NSAlert()
-        alert.messageText = "「\(staged.name)」を追加しますか？"
-        var lines: [String] = []
-        if !staged.version.isEmpty { lines.append("バージョン \(staged.version)") }
-        if staged.permissions.isEmpty && staged.sitePatterns.isEmpty { lines.append("特別な権限は要求されません。") }
-        if !staged.permissions.isEmpty { lines.append("要求する権限: " + staged.permissions.joined(separator: "、")) }
-        if !staged.sitePatterns.isEmpty {
-            let shown = staged.sitePatterns.prefix(8).joined(separator: "、")
-            let rest = staged.sitePatterns.count > 8 ? " ほか\(staged.sitePatterns.count - 8)件" : ""
-            lines.append(staged.sitePatterns.contains { $0 == "<all_urls>" || $0.hasPrefix("*://*/") }
-                ? "すべてのサイトのデータを読み取り・変更できます。"
-                : "アクセスするサイト: \(shown)\(rest)")
-        }
-        alert.informativeText = lines.joined(separator: "\n")
-        alert.addButton(withTitle: "追加")
-        alert.addButton(withTitle: "キャンセル")
-        return alert.runModal() == .alertFirstButtonReturn
+    /// Asks whether to add the staged extension (Figma 8b). It shows the name and version only: the design retired the permission list.
+    func confirmInstall(_ staged: StagedExtension, surface: ExtensionDialogSurface = .browser) async -> Bool {
+        guard let model else { return false }
+        return await model.presentExtensionDialog(.confirm(name: staged.name, version: staged.version), surface: surface)
     }
 
     /// Installs the extension of a Web Store page. The store's own "Add to Chrome" button only works in Chrome,
-    /// so this is the in-app replacement; results are reported in an alert because the caller's UI is already gone.
-    func installFromStore(_ reference: String) async {
-        guard !isInstalling else { return }
+    /// so this is the in-app replacement. Success is silent (the extension's button appears in the site controls);
+    /// only failures are reported, in a dialog because the caller's UI is already gone.
+    /// `pageTitle` is the store tab's title, used to name the extension when the download itself fails.
+    func installFromStore(_ reference: String, pageTitle: String? = nil) async {
+        guard !isInstalling, let model else { return }
         isInstalling = true
         defer { isInstalling = false }
-        let result = NSAlert()
         do {
             let staged = try await manager.stage(storeReference: reference)
-            guard confirmInstall(staged) else { manager.discard(staged); return }
+            guard await confirmInstall(staged) else { manager.discard(staged); return }
             let item = try await manager.commit(staged)
             if let error = manager.loadErrors[item.id] {
-                result.messageText = "「\(item.name)」を追加しましたが、読み込めませんでした。"
-                result.informativeText = error
-                result.alertStyle = .warning
-            } else {
-                result.messageText = "「\(item.name)」を追加しました。"
-                result.informativeText = "拡張機能のボタンは、サイトの操作パネルに表示されます。"
+                _ = await model.presentExtensionDialog(.notice(title: "拡張機能を読み込めませんでした。", lines: ["追加されましたが、読み込めません。", error]))
             }
         } catch {
-            result.messageText = "拡張機能を追加できませんでした。"
-            result.informativeText = error.localizedDescription
-            result.alertStyle = .warning
+            var message = error.localizedDescription
+            if case ExtensionError.download(let reason) = error, let name = ChromeWebStore.extensionName(fromPageTitle: pageTitle) {
+                message = "「\(name)」をダウンロードできませんでした。\(reason)"
+            }
+            _ = await model.presentExtensionDialog(.notice(title: "拡張機能を追加できませんでした。", lines: [message]))
         }
-        result.addButton(withTitle: "OK")
-        result.runModal()
     }
 
     // MARK: WKWebExtensionControllerDelegate

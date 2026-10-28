@@ -167,7 +167,7 @@ struct SiteControlsView: View {
             let installed = model.extensions.installed.contains { $0.storeID == storeID }
             Button {
                 model.showsSiteControls = false
-                Task { await model.extensionHost.installFromStore(pageURL.absoluteString) }
+                Task { await model.extensionHost.installFromStore(pageURL.absoluteString, pageTitle: pageTitle) }
             } label: {
                 settingsRow(title: installed ? "この拡張機能を更新" : "この拡張機能を追加",
                             subtitle: installed ? "ストアの最新版に置き換え" : "Chromeウェブストアから入手") {

@@ -23,6 +23,14 @@ struct ChromeWebStoreTests {
         #expect(try detail("https://example.com/detail/x/\(id)") == nil)
     }
 
+    @Test func readsTheExtensionNameFromAStoreTabTitle() {
+        #expect(ChromeWebStore.extensionName(fromPageTitle: "Dark Reader - Chrome ウェブストア") == "Dark Reader")
+        #expect(ChromeWebStore.extensionName(fromPageTitle: "  uBlock Origin Lite - Chrome Web Store ") == "uBlock Origin Lite")
+        #expect(ChromeWebStore.extensionName(fromPageTitle: "Item not available") == nil)
+        #expect(ChromeWebStore.extensionName(fromPageTitle: " - Chrome ウェブストア") == nil)
+        #expect(ChromeWebStore.extensionName(fromPageTitle: nil) == nil)
+    }
+
     @Test func rejectsOtherInput() {
         #expect(ChromeWebStore.extensionID(from: "") == nil)
         #expect(ChromeWebStore.extensionID(from: "ublock") == nil)

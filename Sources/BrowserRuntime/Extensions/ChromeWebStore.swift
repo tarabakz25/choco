@@ -19,6 +19,16 @@ public enum ChromeWebStore {
         return parts.dropFirst(detail + 1).first(where: isExtensionID)
     }
 
+    /// The extension name in a store tab's title, e.g. "Dark Reader" from "Dark Reader - Chrome ウェブストア".
+    public static func extensionName(fromPageTitle title: String?) -> String? {
+        guard var name = title?.trimmingCharacters(in: .whitespacesAndNewlines) else { return nil }
+        for suffix in [" - Chrome ウェブストア", " - Chrome Web Store"] where name.hasSuffix(suffix) {
+            name = String(name.dropLast(suffix.count)).trimmingCharacters(in: .whitespaces)
+            return name.isEmpty ? nil : name
+        }
+        return nil
+    }
+
     /// `chromeVersion` is announced as `prodversion`; see `ChromeVersionResolver`.
     public static func downloadURL(for id: String, chromeVersion: String = ChromeVersionResolver.fallback) -> URL? {
         guard isExtensionID(id) else { return nil }
