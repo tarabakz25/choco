@@ -37,7 +37,6 @@ struct SiteControlsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: ChocoSpace.u(6)) {
             quickActions
-            storeInstallAction
             sectionHeader("拡張機能")
             extensionTiles
             sectionHeader("Boost")
@@ -158,22 +157,6 @@ struct SiteControlsView: View {
             } label: { extensionTile { DesignIcon("77a3c", size: 13).opacity(0.8) } }
                 .buttonStyle(ChocoPressStyle(radius: 7, tint: .white.opacity(0.2), hoverTint: .white.opacity(0.1)))
                 .accessibilityLabel("拡張機能を追加").accessibilityIdentifier("site-add-extension").help("拡張機能を追加")
-        }
-    }
-
-    /// Shown on a Chrome Web Store page, where the store's own "Add to Chrome" button is disabled outside Chrome.
-    @ViewBuilder private var storeInstallAction: some View {
-        if let pageURL, let storeID = ChromeWebStore.storeDetailID(of: pageURL) {
-            let installed = model.extensions.installed.contains { $0.storeID == storeID }
-            Button {
-                model.showsSiteControls = false
-                Task { await model.extensionHost.installFromStore(pageURL.absoluteString, pageTitle: pageTitle) }
-            } label: {
-                settingsRow(title: installed ? "この拡張機能を更新" : "この拡張機能を追加",
-                            subtitle: installed ? "ストアの最新版に置き換え" : "Chromeウェブストアから入手") {
-                    Image(systemName: installed ? "arrow.triangle.2.circlepath" : "plus").font(.system(size: ChocoSpace.u(13)))
-                }
-            }.buttonStyle(SiteSettingsButtonStyle()).accessibilityIdentifier("site-install-extension")
         }
     }
 
