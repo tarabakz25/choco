@@ -50,6 +50,8 @@ import WebKit
     @ObservationIgnored private(set) var scrollAnchors: [UUID: ScrollAnchor] = [:]
     @ObservationIgnored private var activityFlags: [UUID: TabActivityFlags] = [:]
     @ObservationIgnored private let memoryWatch = MemoryWatchBag()
+    /// Where the command bar gets related searches and links; UI test sessions stay offline.
+    @ObservationIgnored var suggestionService = SearchSuggestionService.google
 
     init(directory: URL? = nil) {
         let arguments = ProcessInfo.processInfo.arguments
@@ -64,6 +66,7 @@ import WebKit
             storeDirectory = URL(fileURLWithPath: arguments[index + 1], isDirectory: true)
         } else { storeDirectory = BrowserStore.defaultDirectory }
         store = BrowserStore(directory: storeDirectory)
+        if arguments.contains("--test-session") { suggestionService = SearchSuggestionService { _ in throw URLError(.notConnectedToInternet) } }
         extensions = ExtensionManager(directory: storeDirectory.appendingPathComponent("Extensions", isDirectory: true))
         extensionHost = ExtensionHost(manager: extensions)
         extensionHost.model = self
@@ -219,6 +222,10 @@ import WebKit
 
     func open(_ text: String, newTab: Bool) {
         guard let url = AddressResolver.resolve(text) else { commandError = "Enter a search term or an HTTP or HTTPS URL."; return }
+        open(url, newTab: newTab)
+    }
+
+    func open(_ url: URL, newTab: Bool) {
         commandError = nil
         if newTab || activeSession == nil {
             send(.newTab(url: url.absoluteString))
