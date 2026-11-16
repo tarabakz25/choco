@@ -1,4 +1,6 @@
 import CoreGraphics
+import Darwin
+import Foundation
 import Testing
 @testable import BrowserApp
 
@@ -41,20 +43,44 @@ import Testing
     }
 
     @Test func navigationButtonsDoNotSlideWhenTheSidebarWidens() {
-        func points(_ width: CGFloat) -> [Int] {
-            NavigationChromeLayout.controlOrigins(sidebarWidth: width).map { Int($0.rounded()) }
-        }
-        let narrow = points(ChocoTheme.sidebarWidth)
-        let wide = points(ChocoTheme.sidebarMaxWidth)
-        let button = Int(ChocoSpace.u(28).rounded())
-        // Toggle, back, forward, reload. The first sits just past the traffic lights (76pt).
-        // Compare the whole list: a `#expect` that subscripts the array reported equal points as
-        // unequal, then trapped with "Index out of range" and aborted the suite.
-        let expected = (0..<4).map { Int(NavigationChromeLayout.trafficLightClearance.rounded()) + $0 * button }
-        #expect(narrow == expected)
-        #expect(wide == expected)
+        let narrow = NavigationChromeLayout.controlOrigins(sidebarWidth: ChocoTheme.sidebarWidth)
+        let wide = NavigationChromeLayout.controlOrigins(sidebarWidth: ChocoTheme.sidebarMaxWidth)
+        // Full-precision text, captured before any expectation. A failing collection `#expect`
+        // makes Swift Testing trap in ContiguousArrayBuffer ("Index out of range", signal 5)
+        // and exit before it prints the two sides.
+        let report = "narrow=[\(Self.describe(narrow))] wide=[\(Self.describe(wide))]"
+        print("navigation-origins \(report)")
+        fflush(stdout)
+        let button = ChocoSpace.u(28)
+        let stayed = Self.describe(narrow) == Self.describe(wide)
+        let packed = Self.packed(narrow, step: button)
+        let clearsLights = (narrow.first ?? -1) >= NavigationChromeLayout.trafficLightClearance
         let reloadEnd = (narrow.last ?? 0) + button
-        #expect(reloadEnd <= Int(ChocoTheme.sidebarWidth.rounded()) - Int(ChocoSpace.u(8).rounded()))
+        let fits = reloadEnd <= ChocoTheme.sidebarWidth - ChocoSpace.u(8)
+        if !stayed || !packed || !clearsLights || !fits {
+            Issue.record("\(report) stayed=\(stayed) packed=\(packed) clearsLights=\(clearsLights) fits=\(fits) reloadEnd=\(reloadEnd) button=\(button)")
+            return
+        }
+        #expect(stayed)
+        #expect(packed)
+        #expect(clearsLights)
+        #expect(fits)
+    }
+
+    /// Eight digits past the point, so a sub-point gap is visible instead of rounding to "104.0".
+    private static func describe(_ values: [CGFloat]) -> String {
+        values.map { String(format: "%.8f", Double($0)) }.joined(separator: ", ")
+    }
+
+    /// Toggle, back, forward, reload, each exactly one button further along. No subscript in an expectation.
+    private static func packed(_ values: [CGFloat], step: CGFloat) -> Bool {
+        guard values.count == 4, let first = values.first else { return false }
+        var previous = first
+        for value in values.dropFirst() {
+            if value - previous != step { return false }
+            previous = value
+        }
+        return true
     }
 }
 
@@ -62,8 +88,9 @@ import Testing
     @Test func arrivingSuggestionsKeepTheHighlightedRow() {
         let rows = ["navigate", "suggestion-swift", "cmd-archive", "cmd-sidebar", "cmd-clear"]
         let index = CommandSelection.highlightedIndex(currentID: "cmd-archive", rowIDs: rows, preferredIndex: 0)
+        let highlighted = rows.indices.contains(index) ? rows[index] : ""
         #expect(index == 2)
-        #expect(rows[index] == "cmd-archive")
+        #expect(highlighted == "cmd-archive")
     }
 
     @Test func aRowThatDisappearsFallsBackToThePreferredOne() {

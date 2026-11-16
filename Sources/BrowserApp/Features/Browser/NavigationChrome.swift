@@ -44,12 +44,19 @@ enum NavigationChromeLayout {
     }
 
     /// Origins of the toggle, back, forward and reload, measured from the sidebar's leading edge.
-    /// `sidebarWidth` does not move them.
+    /// Extra sidebar width does not move them: the view puts that slack in a trailing spacer, and each
+    /// control is one button wide, placed by adding that width (the same way the top-bar `HStack` does).
     static func controlOrigins(sidebarWidth _: CGFloat) -> [CGFloat] {
         let padding = ChocoSpace.u(8)
         let barPadding = ChocoSpace.u(6)
         let button = ChocoSpace.u(28)
-        let start = padding + barPadding + leadingClearance(sidebarPadding: padding, barPadding: barPadding)
-        return (0..<4).map { start + CGFloat($0) * button }
+        var cursor = padding + barPadding + leadingClearance(sidebarPadding: padding, barPadding: barPadding)
+        var origins: [CGFloat] = []
+        origins.reserveCapacity(4)
+        for _ in 0..<4 {
+            origins.append(cursor)
+            cursor += button
+        }
+        return origins
     }
 }
