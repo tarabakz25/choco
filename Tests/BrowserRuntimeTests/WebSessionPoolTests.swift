@@ -76,6 +76,16 @@ struct WebSessionPoolTests {
         pool.retainOnly([])
     }
 
+    @Test func navigationRecordsTheDestinationBeforeTheDocumentCommits() {
+        _ = NSApplication.shared
+        let session = WebSession(id: UUID(), profileID: UUID(), installsStoreBridge: false)
+        let url = URL(string: "https://example.com/docs")!
+        session.navigate(to: url)
+        #expect(session.provisionalURL == url)
+        #expect(session.showsStop)
+        session.dispose()
+    }
+
     @Test func blockedNavigationAndCleanup() {
         _ = NSApplication.shared
         let pool = WebSessionPool()
@@ -84,6 +94,7 @@ struct WebSessionPoolTests {
         session.navigate(to: URL(string: "javascript:alert(1)")!)
         #expect(session.errorMessage != nil)
         #expect(session.webView.url == nil)
+        #expect(session.provisionalURL == nil)
         session.clearError()
         #expect(session.errorMessage == nil)
         var callbackCalled = false

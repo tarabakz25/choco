@@ -118,6 +118,23 @@ import WebKit
         return nil
     }
 
+    /// Address shown in the navigation bar and placed in the command bar by ⌘L.
+    /// An in-flight load wins over the committed document, which lags on the previous page or `about:blank`.
+    var navigationAddress: String? {
+        let session = activeSession
+        return NavigationBarAddress.pageURL(
+            provisional: session?.provisionalURL?.absoluteString,
+            committed: session?.url?.absoluteString,
+            stored: navigationStoredURL
+        )
+    }
+
+    private var navigationStoredURL: String? {
+        if let id = navigationTabID, let tab = state.tabs.first(where: { $0.id == id }) { return tab.url }
+        if let id = state.selectedFavoriteID, let favorite = state.favorites.first(where: { $0.id == id }) { return favorite.url }
+        return nil
+    }
+
     /// The session in front, including a displayed favorite, which has no tab ID.
     private var displayedSession: WebSession? {
         if let id = navigationTabID { return pool.existing(id: id) }
@@ -253,7 +270,7 @@ import WebKit
         showsNewMenu = false
         commandMode = mode
         commandError = nil
-        commandText = mode == .navigate ? (activeSession?.url?.absoluteString ?? selectedTab?.url ?? "") : ""
+        commandText = mode == .navigate ? (navigationAddress ?? "") : ""
     }
 
     func open(_ text: String, newTab: Bool) {

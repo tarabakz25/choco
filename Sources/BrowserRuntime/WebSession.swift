@@ -16,6 +16,11 @@ public final class WebSession: NSObject {
     public private(set) var estimatedProgress = 0.0
     public private(set) var canGoBack = false
     public private(set) var canGoForward = false
+    /// Main-frame URL WebKit has not committed yet. The navigation bar shows this immediately so the
+    /// committed URL, which stays on the previous page or `about:blank` until commit, cannot flash through.
+    public private(set) var provisionalURL: URL?
+    /// Stop is shown for an in-flight load, including the moment after a navigation starts and before `isLoading` flips.
+    public var showsStop: Bool { isLoading || provisionalURL != nil }
     public private(set) var errorMessage: String?
     public private(set) var activeDownloadCount = 0
     public private(set) var downloadProgress: Double?
@@ -34,6 +39,7 @@ public final class WebSession: NSObject {
     @ObservationIgnored private var lastReportedURL: URL?
     @ObservationIgnored private var lastReportedTitle = ""
     @ObservationIgnored private var pendingScroll: PageScrollOffset?
+    @ObservationIgnored private var historyLatch = NavigationHistoryLatch()
 
     public init(id: UUID, profileID: UUID, initialURL: URL? = nil, restoreScroll: PageScrollOffset? = nil, configuration: WKWebViewConfiguration? = nil,
                 extensionController: WKWebExtensionController? = nil, installsStoreBridge: Bool = true) {
@@ -91,13 +97,41 @@ public final class WebSession: NSObject {
         }
         pendingScroll = restoreScroll
         errorMessage = nil
+        if Self.isPageURL(url) {
+            historyLatch.beginNavigation()
+            provisionalURL = url
+        } else {
+            provisionalURL = nil
+        }
         webView.load(URLRequest(url: url))
     }
 
-    public func goBack() { if !isDisposed { errorMessage = nil; webView.goBack() } }
-    public func goForward() { if !isDisposed { errorMessage = nil; webView.goForward() } }
-    public func reload() { if !isDisposed { errorMessage = nil; webView.reload() } }
-    public func stop() { webView.stopLoading() }
+    public func goBack() {
+        guard !isDisposed, webView.canGoBack else { return }
+        errorMessage = nil
+        historyLatch.beginNavigation()
+        webView.goBack()
+    }
+    public func goForward() {
+        guard !isDisposed, webView.canGoForward else { return }
+        errorMessage = nil
+        historyLatch.beginNavigation()
+        webView.goForward()
+    }
+    public func reload() {
+        guard !isDisposed else { return }
+        errorMessage = nil
+        if let url = webView.url, Self.isPageURL(url) {
+            historyLatch.beginNavigation()
+            provisionalURL = url
+        }
+        webView.reload()
+    }
+    public func stop() {
+        provisionalURL = nil
+        webView.stopLoading()
+        updateState(settleHistory: true)
+    }
     public func clearError() { errorMessage = nil }
 
     public func find(_ text: String, backwards: Bool = false) {
@@ -128,6 +162,7 @@ public final class WebSession: NSObject {
         activeDownloadCount = 0
         downloadProgress = nil
         pendingScroll = nil
+        provisionalURL = nil
         onPageChange = nil
         onOpenWindow = nil
         onClose = nil
@@ -168,14 +203,13 @@ public final class WebSession: NSObject {
         Task { @MainActor [weak self] in self?.updateState() }
     }
 
-    private func updateState() {
+    private func updateState(settleHistory: Bool = false) {
         guard !isDisposed else { return }
         url = webView.url
         title = webView.title.flatMap { $0.isEmpty ? nil : $0 } ?? webView.url?.host ?? ""
         isLoading = webView.isLoading
         estimatedProgress = webView.estimatedProgress
-        canGoBack = webView.canGoBack
-        canGoForward = webView.canGoForward
+        publishHistory(settle: settleHistory)
         if lastReportedURL != url || lastReportedTitle != title {
             lastReportedURL = url
             lastReportedTitle = title
@@ -184,9 +218,22 @@ public final class WebSession: NSObject {
         onStateChange?(self)
     }
 
+    /// Publishes back/forward. Mid-load KVO often reports `false` for a step; keep the pre-navigation value until the load settles.
+    private func publishHistory(settle: Bool) {
+        historyLatch.update(liveBack: webView.canGoBack, liveForward: webView.canGoForward, navigating: showsStop, settle: settle)
+        canGoBack = historyLatch.canGoBack
+        canGoForward = historyLatch.canGoForward
+    }
+
     private static func isWebNavigation(_ url: URL) -> Bool {
+        isPageURL(url) || url.absoluteString == "about:blank"
+    }
+
+    /// An address the navigation bar can show. `about:blank` is a document WebKit uses internally, not a page.
+    static func isPageURL(_ url: URL?) -> Bool {
+        guard let url else { return false }
         let scheme = url.scheme?.lowercased()
-        return ((scheme == "http" || scheme == "https") && url.host != nil) || url.absoluteString == "about:blank"
+        return (scheme == "http" || scheme == "https") && url.host != nil
     }
 
     private func present(_ alert: NSAlert, completion: @escaping @MainActor @Sendable (NSApplication.ModalResponse) -> Void) {
@@ -243,12 +290,18 @@ extension WebSession: WKNavigationDelegate {
             return
         }
         if Self.isWebNavigation(url) || url.scheme?.lowercased() == "blob" {
+            // Subframes must not replace the address of the page the person is looking at.
+            if navigationAction.targetFrame?.isMainFrame == true, Self.isPageURL(url) {
+                historyLatch.beginNavigation()
+                provisionalURL = url
+            }
             decisionHandler(.allow)
         } else if navigationAction.navigationType == .linkActivated,
                   ["mailto", "tel", "sms"].contains(url.scheme?.lowercased() ?? "") {
             decisionHandler(.cancel)
             NSWorkspace.shared.open(url)
         } else {
+            if navigationAction.targetFrame?.isMainFrame == true, provisionalURL == url { provisionalURL = nil }
             decisionHandler(.cancel)
             errorMessage = Localizer().text("This type of link cannot be opened in this browser.")
         }
@@ -258,18 +311,42 @@ extension WebSession: WKNavigationDelegate {
         decisionHandler(navigationResponse.canShowMIMEType ? .allow : .download)
     }
 
-    public func webView(_ webView: WKWebView, navigationAction: WKNavigationAction, didBecome download: WKDownload) { beginTracking(download) }
-    public func webView(_ webView: WKWebView, navigationResponse: WKNavigationResponse, didBecome download: WKDownload) { beginTracking(download) }
+    public func webView(_ webView: WKWebView, navigationAction: WKNavigationAction, didBecome download: WKDownload) {
+        provisionalURL = nil
+        beginTracking(download)
+        updateState(settleHistory: true)
+    }
+    public func webView(_ webView: WKWebView, navigationResponse: WKNavigationResponse, didBecome download: WKDownload) {
+        provisionalURL = nil
+        beginTracking(download)
+        updateState(settleHistory: true)
+    }
     public func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) { errorMessage = nil; updateState() }
+    public func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+        // An intermediate `about:blank` commit is not the page we asked for; keep showing the in-flight URL.
+        if Self.isPageURL(webView.url) { provisionalURL = nil }
+        // A committed page that is no longer loading has finished revising history.
+        updateState(settleHistory: provisionalURL == nil && !webView.isLoading)
+    }
     public func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        updateState()
+        provisionalURL = nil
+        updateState(settleHistory: true)
         applyPendingScroll()
     }
-    public func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { reportNavigationError(error) }
-    public func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { reportNavigationError(error) }
+    public func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        provisionalURL = nil
+        reportNavigationError(error)
+        updateState(settleHistory: true)
+    }
+    public func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        provisionalURL = nil
+        reportNavigationError(error)
+        updateState(settleHistory: true)
+    }
     public func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        provisionalURL = nil
         errorMessage = Localizer().text("The page stopped responding. Reload to continue.")
-        updateState()
+        updateState(settleHistory: true)
     }
 
     private func applyPendingScroll() {
@@ -293,7 +370,6 @@ extension WebSession: WKNavigationDelegate {
         let error = error as NSError
         if error.domain == NSURLErrorDomain && error.code == NSURLErrorCancelled { return }
         errorMessage = Localizer().format("Could not open the page: %@", error.localizedDescription)
-        updateState()
     }
 }
 
@@ -396,6 +472,44 @@ extension WebSession: WKDownloadDelegate {
             errorMessage = Localizer().format("Download failed: %@", error.localizedDescription)
         }
         finishTracking(download)
+    }
+}
+
+/// Back/forward as the navigation bar should show them.
+/// WebKit reports `canGoBack` / `canGoForward` as false for a step while it rewrites the list.
+/// `beginNavigation` remembers the settled value; it is kept until a load is actually seen and then finishes (`settle`).
+struct NavigationHistoryLatch: Equatable {
+    private(set) var canGoBack = false
+    private(set) var canGoForward = false
+    private var holding = false
+    private var sawLoad = false
+    private var anchorBack = false
+    private var anchorForward = false
+
+    mutating func beginNavigation() {
+        guard !holding else { return }
+        holding = true
+        sawLoad = false
+        anchorBack = canGoBack
+        anchorForward = canGoForward
+    }
+
+    mutating func update(liveBack: Bool, liveForward: Bool, navigating: Bool, settle: Bool = false) {
+        if navigating {
+            beginNavigation()
+            sawLoad = true
+        }
+        // `settle` finishes a load that never reported `isLoading`, but not while a load is still running.
+        let finished = !navigating && (settle || (holding && sawLoad))
+        if finished || !holding {
+            holding = false
+            sawLoad = false
+            canGoBack = liveBack
+            canGoForward = liveForward
+        } else {
+            canGoBack = anchorBack || liveBack
+            canGoForward = anchorForward || liveForward
+        }
     }
 }
 

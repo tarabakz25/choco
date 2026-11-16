@@ -98,8 +98,12 @@ private struct DetachedTabView: View {
     }
 
     private var address: String {
-        guard let url = session.url, url.absoluteString != "about:blank" else { return "新しいタブ" }
-        return (url.host ?? url.absoluteString) + (url.path == "/" ? "" : url.path)
+        guard let url = NavigationBarAddress.pageURL(
+            provisional: session.provisionalURL?.absoluteString,
+            committed: session.url?.absoluteString,
+            stored: nil
+        ) else { return "新しいタブ" }
+        return NavigationBarAddress.label(for: url)
     }
 
     private var toolbar: some View {
@@ -110,11 +114,11 @@ private struct DetachedTabView: View {
                 .disabled(!session.canGoBack).help("戻る").accessibilityLabel("戻る")
             Button { session.goForward() } label: { DesignIcon("caa3a", size: 16).opacity(0.62).frame(width: ChocoSpace.u(28), height: 28) }
                 .disabled(!session.canGoForward).help("進む").accessibilityLabel("進む")
-            Button { session.isLoading ? session.stop() : session.reload() } label: {
+            Button { session.showsStop ? session.stop() : session.reload() } label: {
                 DesignIcon("108be", size: 16).opacity(0.62).frame(width: ChocoSpace.u(28), height: 28)
             }
-            .help(session.isLoading ? "読み込みを中止" : "再読み込み")
-            .accessibilityLabel(session.isLoading ? "読み込みを中止" : "再読み込み")
+            .help(session.showsStop ? "読み込みを中止" : "再読み込み")
+            .accessibilityLabel(session.showsStop ? "読み込みを中止" : "再読み込み")
             HStack(spacing: ChocoSpace.u(6)) {
                 SiteIcon(url: session.url?.absoluteString ?? "", size: 13)
                 Text(address).font(ChocoTheme.font(13)).foregroundStyle(ChocoTheme.secondary)

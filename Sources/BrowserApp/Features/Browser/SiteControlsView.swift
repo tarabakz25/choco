@@ -16,10 +16,9 @@ struct SiteControlsView: View {
         return model.state.tabs.first { $0.id == id }
     }
     private var pageURL: URL? {
-        let favoriteAddress = model.state.favorites.first { $0.id == model.state.selectedFavoriteID }?.url
-        guard let url = model.activeSession?.url ?? URL(string: currentTab?.url ?? favoriteAddress ?? ""),
-              ["http", "https"].contains(url.scheme?.lowercased() ?? ""), url.host != nil else { return nil }
-        return url
+        // Same address the navigation bar shows, so a transient `about:blank` does not disable the page actions.
+        guard let address = model.navigationAddress else { return nil }
+        return URL(string: address)
     }
     private var pageTitle: String {
         currentTab?.displayTitle ?? model.activeSession?.title ?? pageURL?.host ?? "ページ"
