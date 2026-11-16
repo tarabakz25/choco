@@ -1,3 +1,4 @@
+import CoreGraphics
 import Testing
 @testable import BrowserApp
 
@@ -40,16 +41,20 @@ import Testing
     }
 
     @Test func navigationButtonsDoNotSlideWhenTheSidebarWidens() {
-        let narrow = NavigationChromeLayout.controlOrigins(sidebarWidth: ChocoTheme.sidebarWidth)
-        let wide = NavigationChromeLayout.controlOrigins(sidebarWidth: ChocoTheme.sidebarMaxWidth)
-        #expect(narrow == wide)
-        #expect(narrow.count == 4)
-        #expect(narrow[0] >= NavigationChromeLayout.trafficLightClearance)
-        let button = ChocoSpace.u(28)
-        #expect(narrow[3] + button <= ChocoTheme.sidebarWidth - ChocoSpace.u(8))
-        #expect(narrow[1] == narrow[0] + button)
-        #expect(narrow[2] == narrow[1] + button)
-        #expect(narrow[3] == narrow[2] + button)
+        func points(_ width: CGFloat) -> [Int] {
+            NavigationChromeLayout.controlOrigins(sidebarWidth: width).map { Int($0.rounded()) }
+        }
+        let narrow = points(ChocoTheme.sidebarWidth)
+        let wide = points(ChocoTheme.sidebarMaxWidth)
+        let button = Int(ChocoSpace.u(28).rounded())
+        // Toggle, back, forward, reload. The first sits just past the traffic lights (76pt).
+        // Compare the whole list: a `#expect` that subscripts the array reported equal points as
+        // unequal, then trapped with "Index out of range" and aborted the suite.
+        let expected = (0..<4).map { Int(NavigationChromeLayout.trafficLightClearance.rounded()) + $0 * button }
+        #expect(narrow == expected)
+        #expect(wide == expected)
+        let reloadEnd = (narrow.last ?? 0) + button
+        #expect(reloadEnd <= Int(ChocoTheme.sidebarWidth.rounded()) - Int(ChocoSpace.u(8).rounded()))
     }
 }
 
