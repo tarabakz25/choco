@@ -84,6 +84,7 @@ struct WebSessionPoolTests {
         session.navigate(to: URL(string: "javascript:alert(1)")!)
         #expect(session.errorMessage != nil)
         #expect(session.webView.url == nil)
+        #expect(session.provisionalURL == nil)
         session.clearError()
         #expect(session.errorMessage == nil)
         var callbackCalled = false

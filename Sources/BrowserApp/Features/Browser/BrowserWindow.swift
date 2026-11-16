@@ -530,9 +530,20 @@ private struct BrowserPane: View {
     @Bindable var model: AppModel
     let session: WebSession
     let tabID: UUID?
+    /// Empty only when neither the in-flight load, the committed document, nor the saved tab URL is a page.
+    /// Unmounting `WebViewMount` for a transient `about:blank` swapped the live page out and back in.
+    private var showsEmptyPage: Bool {
+        let stored = tabID.flatMap { id in model.state.tabs.first { $0.id == id }?.url }
+        return NavigationBarAddress.pageURL(
+            provisional: session.provisionalURL?.absoluteString,
+            committed: session.url?.absoluteString,
+            stored: stored
+        ) == nil
+    }
+
     var body: some View {
         ZStack {
-            if session.url == nil || session.url?.absoluteString == "about:blank" {
+            if showsEmptyPage {
                 VStack(spacing: ChocoSpace.u(14)) {
                     Image(systemName: "sparkle").font(.system(size: ChocoSpace.u(40), weight: .light)).foregroundStyle(ChocoTheme.secondary)
                     Text("新しいタブ").font(.title2.weight(.medium))

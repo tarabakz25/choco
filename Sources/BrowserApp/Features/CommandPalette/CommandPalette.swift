@@ -5,10 +5,33 @@ import SwiftUI
 
 enum CommandMode { case newTab, navigate }
 
+/// Which command-bar row stays highlighted.
+/// Suggestions are inserted above commands after a delay. An index would then point at a different row
+/// than the one the person moved to; the highlight follows the row id instead, and only a new query adopts the preferred row.
+enum CommandSelection {
+    static func preferred(_ rowIDs: [String], preferredIndex: Int) -> String {
+        guard rowIDs.indices.contains(preferredIndex) else { return rowIDs.first ?? "navigate" }
+        return rowIDs[preferredIndex]
+    }
+
+    static func highlightedIndex(currentID: String, rowIDs: [String], preferredIndex: Int) -> Int {
+        if let index = rowIDs.firstIndex(of: currentID) { return index }
+        guard rowIDs.indices.contains(preferredIndex) else { return 0 }
+        return preferredIndex
+    }
+
+    static func move(_ currentID: String, rowIDs: [String], preferredIndex: Int, by delta: Int) -> String {
+        guard !rowIDs.isEmpty else { return currentID }
+        let index = highlightedIndex(currentID: currentID, rowIDs: rowIDs, preferredIndex: preferredIndex)
+        let next = min(max(0, rowIDs.count - 1), index + delta)
+        return rowIDs[next]
+    }
+}
+
 struct CommandPalette: View {
     @Bindable var model: AppModel
     @FocusState private var focused: Bool
-    @State private var selection = 0
+    @State private var selectionID = "navigate"
     @State private var showsInputHelp = false
     @State private var suggestions = SearchSuggestions.empty
     @State private var suggestionsQuery = ""
@@ -81,6 +104,8 @@ struct CommandPalette: View {
     }
     private var rows: [Row] { rowSet.rows }
     private var navigateIndex: Int { rows.firstIndex { if case .navigate = $0 { true } else { false } } ?? 0 }
+    private var rowIDs: [String] { rows.map(\.id) }
+    private var selection: Int { CommandSelection.highlightedIndex(currentID: selectionID, rowIDs: rowIDs, preferredIndex: preferredSelection) }
 
     private var showsNavigationResult: Bool { model.commandMode == .navigate || !query.isEmpty }
     /// Cmd+L keeps navigating the typed text; otherwise the first real tab match wins. Filler rows are never
@@ -108,13 +133,16 @@ struct CommandPalette: View {
                     VStack(spacing: 1) {
                         ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
                             rowButton(row, index: index)
-                                .id(index)
+                                .id(row.id)
                         }
                     }
                 }
                 .scrollIndicators(.hidden)
                 .frame(height: CGFloat(Self.visibleRows) * (ChocoSpace.u(42) + 1) - 1)
-                .onChange(of: selection) { _, value in proxy.scrollTo(value, anchor: .center) }
+                .onChange(of: selection) { _, value in
+                    guard rows.indices.contains(value) else { return }
+                    proxy.scrollTo(rows[value].id, anchor: .center)
+                }
             }
             .padding(.horizontal, ChocoSpace.u(6)).padding(.top, ChocoSpace.u(6)).padding(.bottom, ChocoSpace.u(8))
         }
@@ -126,19 +154,16 @@ struct CommandPalette: View {
         .shadow(color: .black.opacity(0.45), radius: 24, x: 0, y: 16)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("command-palette")
-        .onAppear {
-            selection = preferredSelection
-        }
+        .onAppear { adoptPreferredSelection() }
         .task(id: model.commandMode == .navigate) { await focusCommandInput() }
-        .onChange(of: model.commandText) { _, value in
+        .onChange(of: model.commandText) { _, _ in
             model.commandError = nil
             // Cmd+L keeps navigation in the current Profile; switching to a
             // suggestion in another Space always requires an explicit choice.
-            selection = preferredSelection
+            adoptPreferredSelection()
         }
-        .onChange(of: rows.count) { _, count in selection = min(selection, max(0, count - 1)) }
         .task(id: query) { await loadSuggestions(for: query) }
-        .onChange(of: model.commandMode == .navigate) { _, _ in selection = preferredSelection }
+        .onChange(of: model.commandMode == .navigate) { _, _ in adoptPreferredSelection() }
     }
 
     private var input: some View {
@@ -154,11 +179,13 @@ struct CommandPalette: View {
                 .onSubmit { submitInput() }
                 .onKeyPress(.downArrow) {
                     guard !hasMarkedText else { return .ignored }
-                    selection = min(max(0, rows.count - 1), selection + 1); return .handled
+                    selectionID = CommandSelection.move(selectionID, rowIDs: rowIDs, preferredIndex: preferredSelection, by: 1)
+                    return .handled
                 }
                 .onKeyPress(.upArrow) {
                     guard !hasMarkedText else { return .ignored }
-                    selection = max(0, selection - 1); return .handled
+                    selectionID = CommandSelection.move(selectionID, rowIDs: rowIDs, preferredIndex: preferredSelection, by: -1)
+                    return .handled
                 }
                 .onKeyPress(.escape) {
                     guard !hasMarkedText else { return .ignored }
@@ -256,6 +283,10 @@ struct CommandPalette: View {
         .background(selected ? ChocoTheme.commandSelected : .clear, in: RoundedRectangle(cornerRadius: 8))
         .contentShape(RoundedRectangle(cornerRadius: 8))
         .accessibilityAddTraits(selected ? [.isSelected] : [])
+    }
+
+    private func adoptPreferredSelection() {
+        selectionID = CommandSelection.preferred(rowIDs, preferredIndex: preferredSelection)
     }
 
     private var hasMarkedText: Bool { (NSApp.keyWindow?.firstResponder as? NSTextView)?.hasMarkedText() ?? false }

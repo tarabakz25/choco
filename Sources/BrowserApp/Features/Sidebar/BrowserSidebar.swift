@@ -205,43 +205,39 @@ struct BrowserSidebar: View {
         }
     }
 
-    /// Distance from the sidebar's leading edge to the first control, clear of the native traffic lights.
-    private static let controlsInset: CGFloat = 76
-
     private var topBar: some View {
-        HStack(spacing: 0) {
+        let session = model.activeSession
+        let navigating = session?.showsStop == true
+        return HStack(spacing: 0) {
             // Native macOS controls are positioned by the window; never draw inactive lookalikes.
-            Color.clear.frame(width: Self.controlsInset - ChocoSpace.u(8) - ChocoSpace.u(6), height: 12).accessibilityHidden(true)
+            Color.clear
+                .frame(width: NavigationChromeLayout.leadingClearance(sidebarPadding: ChocoSpace.u(8), barPadding: ChocoSpace.u(6)), height: 12)
+                .accessibilityHidden(true)
             Button { model.send(.toggleSidebar) } label: { DesignIcon("de36e", size: 16).opacity(0.62).frame(width: ChocoSpace.u(28), height: 28) }
                 .help("サイドバーを隠す (⌘S)").accessibilityLabel("サイドバーを隠す")
-            Spacer(minLength: 0)
-            Button { model.activeSession?.goBack() } label: { DesignIcon("687ab", size: 16).opacity(0.62).frame(width: ChocoSpace.u(28), height: 28) }
-                .disabled(!(model.activeSession?.canGoBack ?? false)).help("戻る (⌘[)").accessibilityLabel("戻る")
-            Button { model.activeSession?.goForward() } label: { DesignIcon("caa3a", size: 16).opacity(0.62).frame(width: ChocoSpace.u(28), height: 28) }
-                .disabled(!(model.activeSession?.canGoForward ?? false)).help("進む (⌘])").accessibilityLabel("進む")
+            Button { session?.goBack() } label: { DesignIcon("687ab", size: 16).opacity(0.62).frame(width: ChocoSpace.u(28), height: 28) }
+                .disabled(!(session?.canGoBack ?? false)).help("戻る (⌘[)").accessibilityLabel("戻る")
+            Button { session?.goForward() } label: { DesignIcon("caa3a", size: 16).opacity(0.62).frame(width: ChocoSpace.u(28), height: 28) }
+                .disabled(!(session?.canGoForward ?? false)).help("進む (⌘])").accessibilityLabel("進む")
             Button {
-                guard let session = model.activeSession else { return }
-                session.isLoading ? session.stop() : session.reload()
+                guard let session else { return }
+                session.showsStop ? session.stop() : session.reload()
             } label: { DesignIcon("108be", size: 16).opacity(0.62).frame(width: ChocoSpace.u(28), height: 28) }
-                .help(model.activeSession?.isLoading == true ? "読み込みを中止" : "再読み込み (⌘R)")
-                .accessibilityLabel(model.activeSession?.isLoading == true ? "読み込みを中止" : "再読み込み")
+                .help(navigating ? "読み込みを中止" : "再読み込み (⌘R)")
+                .accessibilityLabel(navigating ? "読み込みを中止" : "再読み込み")
+            // Wider sidebars leave the slack here, so back / forward / reload stay beside the traffic lights.
+            Spacer(minLength: 0)
         }
         .buttonStyle(ChocoPressStyle(disabledOpacity: 0.35))
         .padding(.leading, ChocoSpace.u(6))
         .frame(height: 28)
     }
 
-    private var currentURL: String? {
-        let address = model.activeSession?.url?.absoluteString ?? model.selectedTab?.url
-        return address == "about:blank" ? nil : address
-    }
+    private var currentURL: String? { model.navigationAddress }
 
     private var displayAddress: String {
-        guard let address = currentURL, let url = URL(string: address) else { return "検索またはURLを入力…" }
-        if let host = url.host {
-            return host + (url.path == "/" ? "" : url.path)
-        }
-        return address
+        guard let address = currentURL else { return "検索またはURLを入力…" }
+        return NavigationBarAddress.label(for: address)
     }
 
     /// Figma `Sidebar URL Field`: "Search" (placeholder, no controls) while there is no page, "URL" (address, link and
